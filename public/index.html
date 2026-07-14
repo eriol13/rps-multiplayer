@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✊✋✌ 멀티플레이어 가위바위보</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #1e293b, #0f172a); color: #e2e8f0;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .card {
+    position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+    padding: 24px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; text-align: center; }
+  .sub { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+  label { font-size: 13px; color: #94a3b8; display: block; margin-bottom: 4px; }
+  input {
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #475569;
+    background: #0f172a; color: #e2e8f0; font-size: 15px; margin-bottom: 12px;
+  }
+  button {
+    cursor: pointer; border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+    padding: 12px 16px; transition: transform .08s, filter .15s;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary { background: #6366f1; color: #fff; width: 100%; }
+  .hidden { display: none !important; }
+
+  .mode-row { display: flex; gap: 10px; margin-top: 6px; }
+  .btn-create { flex: 1; background: #6366f1; color: #fff; }
+  .btn-join { flex: 1; background: #0ea5e9; color: #fff; }
+  .btn-link {
+    background: transparent; color: #94a3b8; width: 100%; margin-top: 8px;
+    font-weight: 500; padding: 8px;
+  }
+  .btn-link:hover { color: #e2e8f0; }
+  .error {
+    margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14px;
+    background: #7f1d1d; color: #fecaca; text-align: center;
+  }
+
+  .status {
+    text-align: center; font-size: 15px; margin: 8px 0 6px; min-height: 22px;
+    color: #a5b4fc; font-weight: 600;
+  }
+  .countdown { font-size: 40px; font-weight: 800; color: #f472b6; text-align: center; margin: 2px 0; }
+
+  /* 라운드 결과 배너 */
+  .banner {
+    text-align: center; font-size: 17px; font-weight: 800; padding: 12px; border-radius: 12px;
+    margin: 10px 0; background: #422006; color: #fde68a; border: 1px solid #92400e;
+  }
+  .banner.draw { background: #1e293b; color: #94a3b8; border-color: #475569; }
+
+  .choices { display: flex; gap: 12px; justify-content: center; margin: 16px 0; }
+  .choice {
+    font-size: 44px; width: 84px; height: 84px; border-radius: 16px;
+    background: #0f172a; border: 2px solid #475569; display: flex; align-items: center; justify-content: center;
+  }
+  .choice.selected { border-color: #6366f1; background: #312e81; }
+  .btn-random { display: block; width: 100%; background: #334155; color: #e2e8f0; margin-bottom: 4px; }
+
+  .players { list-style: none; padding: 0; margin: 16px 0 0; }
+  .player {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+    background: #0f172a; margin-bottom: 8px; border: 1px solid #1e293b;
+  }
+  .player.me { border-color: #6366f1; }
+  .player.winner { border-color: #fbbf24; background: #29200a; }
+  .pname { flex: 1; font-weight: 600; }
+  .pscore { font-size: 18px; font-weight: 800; color: #fbbf24; min-width: 32px; text-align: right; }
+  .pchoice { font-size: 24px; min-width: 26px; }
+  .crown { font-size: 18px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+  .badge.ready { background: #166534; color: #bbf7d0; }
+  .badge.chosen { background: #1e40af; color: #bfdbfe; }
+  .badge.win { background: #92400e; color: #fde68a; }
+  .badge.off { background: #7f1d1d; color: #fecaca; }
+  .badge.spectator { background: #334155; color: #cbd5e1; }
+
+  .roomtag { text-align: center; color: #64748b; font-size: 12px; margin-top: 14px; }
+
+  #chatbox { margin-top: 16px; }
+  #chatlog {
+    height: 90px; overflow-y: auto; background: #0f172a; border-radius: 10px; padding: 8px;
+    font-size: 13px; border: 1px solid #1e293b;
+  }
+  #chatlog div { margin-bottom: 3px; }
+  #chatlog b { color: #a5b4fc; }
+  .chatrow { display: flex; gap: 8px; margin-top: 8px; }
+  .chatrow input { margin: 0; }
+  .chatrow button { background: #334155; color: #e2e8f0; }
+
+  /* 최종 우승 오버레이 */
+  #overlay {
+    position: absolute; inset: 0; background: rgba(15,23,42,.94); border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; z-index: 10;
+  }
+  #overlay .trophy { font-size: 72px; animation: pop .5s ease; }
+  #overlay .champ { font-size: 28px; font-weight: 800; margin: 8px 0; color: #fbbf24; }
+  #overlay .final { color: #94a3b8; margin-bottom: 20px; }
+  #overlay button { width: 80%; }
+  @keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>✊✋✌ 멀티플레이어 가위바위보</h1>
+  <div class="sub">여러 명이 동시에 · 실시간 WebSocket</div>
+
+  <!-- 로그인 -->
+  <div id="login">
+    <label>닉네임</label>
+    <input id="name" placeholder="닉네임" maxlength="16" />
+
+    <!-- 모드 선택 -->
+    <div id="modeButtons" class="mode-row">
+      <button class="btn-create" id="showCreate">＋ 방 만들기</button>
+      <button class="btn-join" id="showJoin">→ 입장하기</button>
+    </div>
+
+    <!-- 방 만들기 패널 -->
+    <div id="createPanel" class="hidden">
+      <label>방 이름 <span style="color:#64748b">(비우면 lobby)</span></label>
+      <input id="createRoom" placeholder="새 방 이름" maxlength="16" />
+      <label>몇 판 <span style="color:#64748b">(1~20)</span></label>
+      <input id="createRounds" type="number" min="1" max="20" value="3" />
+      <button class="btn-primary" id="createBtn">방 만들고 입장</button>
+      <button class="btn-link" id="backFromCreate">← 뒤로</button>
+    </div>
+
+    <!-- 입장하기 패널 -->
+    <div id="joinPanel" class="hidden">
+      <label>방 이름 <span style="color:#64748b">(들어갈 방 이름)</span></label>
+      <input id="joinRoom" placeholder="방 이름" maxlength="16" />
+      <button class="btn-primary" id="joinBtn">입장하기</button>
+      <button class="btn-link" id="backFromJoin">← 뒤로</button>
+    </div>
+
+    <div id="loginError" class="error hidden"></div>
+  </div>
+
+  <!-- 게임 -->
+  <div id="game" class="hidden">
+    <div class="status" id="status">대기 중…</div>
+    <div class="countdown hidden" id="countdown"></div>
+    <div class="banner hidden" id="banner"></div>
+
+    <div class="choices" id="choices">
+      <div class="choice" data-c="rock">✊</div>
+      <div class="choice" data-c="paper">✋</div>
+      <div class="choice" data-c="scissors">✌️</div>
+    </div>
+    <button class="btn-random" id="randomBtn">🎲 랜덤으로 내기</button>
+
+    <button class="btn-primary" id="readyBtn">준비 완료</button>
+
+    <ul class="players" id="players"></ul>
+    <div class="roomtag" id="roomtag"></div>
+    <button class="btn-link" id="leaveBtn">방 나가기</button>
+
+    <div id="chatbox">
+      <div id="chatlog"></div>
+      <div class="chatrow">
+        <input id="chatinput" placeholder="메시지…" maxlength="200" />
+        <button id="chatsend">전송</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 최종 우승 오버레이 -->
+  <div id="overlay" class="hidden">
+    <div class="trophy">🏆</div>
+    <div class="champ" id="champName"></div>
+    <div class="final" id="champScore"></div>
+    <button class="btn-primary" id="playAgainBtn">돌아가기</button>
+    <button class="btn-link" id="overlayLeaveBtn" style="width:80%">방 나가기</button>
+  </div>
+</div>
+
+<script>
+const EMOJI = { rock: '✊', paper: '✋', scissors: '✌️' };
+
+let ws, myId = null, myChoice = null, myReady = false, phase = 'waiting', inGame = false, canPlay = true, overlayDismissed = false;
+
+const $ = (id) => document.getElementById(id);
+
+// 모드 전환
+$('showCreate').onclick = () => { $('modeButtons').classList.add('hidden'); $('createPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+$('showJoin').onclick   = () => { $('modeButtons').classList.add('hidden'); $('joinPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+$('backFromCreate').onclick = () => { $('createPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+$('backFromJoin').onclick   = () => { $('joinPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+
+$('createBtn').onclick = () => {
+  const name = $('name').value.trim() || '익명';
+  const room = $('createRoom').value.trim() || 'lobby';
+  const rounds = Math.min(20, Math.max(1, parseInt($('createRounds').value) || 3));
+  connect(name, room, rounds, 'create');
+};
+$('joinBtn').onclick = () => {
+  const name = $('name').value.trim() || '익명';
+  const room = $('joinRoom').value.trim();
+  if (!room) { showLoginError('방 이름을 입력하세요.'); return; }
+  connect(name, room, null, 'join');
+};
+
+function showLoginError(text) {
+  const el = $('loginError');
+  el.textContent = text;
+  el.classList.remove('hidden');
+}
+
+function connect(name, room, rounds, mode) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', name, room, rounds, mode }));
+  ws.onmessage = (e) => handle(JSON.parse(e.data));
+  ws.onclose = () => { if (inGame) $('status').textContent = '연결이 끊겼습니다. 새로고침하세요.'; };
+}
+
+function handle(msg) {
+  if (msg.type === 'error') {
+    showLoginError(msg.message);
+    if (ws) ws.close();
+    return;
+  } else if (msg.type === 'joined') {
+    myId = msg.id;
+    inGame = true;
+    $('login').classList.add('hidden');
+    $('game').classList.remove('hidden');
+  } else if (msg.type === 'state') {
+    render(msg);
+  } else if (msg.type === 'chat') {
+    addChat(msg.name, msg.text);
+  }
+}
+
+function nameOf(s, id) {
+  const p = s.players.find(x => x.id === id);
+  return p ? p.name : '?';
+}
+
+function render(s) {
+  const prevPhase = phase;
+  phase = s.phase;
+  if (prevPhase !== 'choosing' && s.phase === 'choosing') myChoice = null;
+  if (s.phase === 'waiting' || s.phase === 'gameover') myChoice = null;
+  // 새 결과 화면 진입 시 오버레이를 다시 보여줌
+  if (prevPhase !== 'gameover' && s.phase === 'gameover') overlayDismissed = false;
+
+  const me = s.players.find(p => p.id === myId);
+  // 진행 중 매치에 뒤늦게 들어온 관전자 여부
+  const iSpectator = !!me && me.playing === false && (s.phase === 'choosing' || s.phase === 'reveal');
+
+  $('roomtag').textContent = `방: ${s.room} · ${s.totalRounds}판 승부`;
+
+  // 상태 텍스트
+  let statusText = '';
+  if (s.phase === 'waiting') {
+    const ready = s.players.filter(p => p.ready).length;
+    statusText = `대기 중 · 준비 ${ready}/${s.players.length}명 (2명 이상 전원 준비 시 시작)`;
+  } else if (s.phase === 'choosing') {
+    if (iSpectator) {
+      statusText = `👀 관전 중 · 다음 매치부터 참여합니다`;
+    } else if (s.suddenDeath) {
+      statusText = s.tiebreakGroup.includes(myId)
+        ? `🔥 연장 승부! 승부날 때까지 — 선택하세요!`
+        : `🔥 연장 승부 관전 중 (동점자끼리 결착)`;
+    } else {
+      statusText = `🎮 라운드 ${s.round} / ${s.totalRounds} — 선택하세요!`;
+    }
+  } else if (s.phase === 'reveal') {
+    if (iSpectator) statusText = `👀 관전 중 · 다음 매치부터 참여합니다`;
+    else statusText = s.suddenDeath ? `🔥 연장 승부 결과` : `라운드 ${s.round} / ${s.totalRounds} 결과`;
+  } else if (s.phase === 'gameover') {
+    const ready = s.players.filter(p => p.ready).length;
+    statusText = `게임 종료! 다시 시작 준비 ${ready}/${s.players.length}명 (전원 준비 시 시작)`;
+  }
+  $('status').textContent = statusText;
+
+  // 카운트다운
+  const cd = $('countdown');
+  if (s.phase === 'choosing' && s.countdown > 0) {
+    cd.classList.remove('hidden'); cd.textContent = s.countdown;
+  } else cd.classList.add('hidden');
+
+  // 라운드 결과 배너
+  const banner = $('banner');
+  if (s.phase === 'reveal') {
+    banner.classList.remove('hidden');
+    if (s.suddenDeath) {
+      // 연장 승부: 단독 승자가 나오면 그대로 우승, 아니면 다시 연장
+      if (s.roundWinners.length === 1) {
+        banner.className = 'banner';
+        banner.textContent = `🔥 연장 승부 승자: ${nameOf(s, s.roundWinners[0])} 🏆`;
+      } else {
+        banner.className = 'banner draw';
+        banner.textContent = '🤝 또 무승부! 승부날 때까지 다시 연장';
+      }
+    } else if (s.roundWinners.length === 1) {
+      banner.className = 'banner';
+      banner.textContent = `🏆 이번 라운드 승자: ${nameOf(s, s.roundWinners[0])}`;
+    } else if (s.roundWinners.length > 1) {
+      banner.className = 'banner';
+      banner.textContent = `🏆 공동 승리: ${s.roundWinners.map(id => nameOf(s, id)).join(', ')}`;
+    } else {
+      banner.className = 'banner draw';
+      banner.textContent = '🤝 무승부!';
+    }
+  } else {
+    banner.classList.add('hidden');
+  }
+
+  // 내 준비 상태 동기화
+  if (me) myReady = me.ready;
+
+  // 선택 버튼 (관전자 제외, 연장 승부 중엔 동점 선두 그룹만 낼 수 있음)
+  const choosing = s.phase === 'choosing';
+  canPlay = (!me || me.playing !== false) && (!s.suddenDeath || s.tiebreakGroup.includes(myId));
+  const iChoose = choosing && canPlay;
+  document.querySelectorAll('.choice').forEach(el => {
+    el.classList.toggle('selected', myChoice === el.dataset.c);
+    el.style.opacity = iChoose ? '1' : '.4';
+    el.style.cursor = iChoose ? 'pointer' : 'default';
+  });
+  $('randomBtn').disabled = !iChoose;
+
+  // 준비/다시하기 버튼 (waiting, gameover 에서만) — 한 번 누르면 확정
+  const rb = $('readyBtn');
+  if (s.phase === 'waiting' || s.phase === 'gameover') {
+    rb.classList.remove('hidden');
+    const readyCount = s.players.filter(p => p.ready).length;
+    const total = s.players.length;
+    if (myReady) {
+      rb.disabled = true;
+      rb.style.background = '#334155';
+      rb.textContent = `대기 중… (준비 ${readyCount}/${total}명)`;
+    } else {
+      rb.disabled = false;
+      rb.style.background = '#6366f1';
+      rb.textContent = `준비 완료 (준비 ${readyCount}/${total}명)`;
+    }
+  } else rb.classList.add('hidden');
+
+  // 플레이어 목록 (점수 내림차순)
+  const winnerSet = new Set(s.phase === 'reveal' ? s.roundWinners : (s.phase === 'gameover' ? s.champions : []));
+  const list = $('players');
+  list.innerHTML = '';
+  [...s.players].sort((a, b) => b.score - a.score).forEach(p => {
+    const li = document.createElement('li');
+    const isWinner = winnerSet.has(p.id);
+    li.className = 'player' + (p.id === myId ? ' me' : '') + (isWinner ? ' winner' : '');
+
+    let badges = '';
+    const spectating = p.playing === false && (s.phase === 'choosing' || s.phase === 'reveal');
+    if (!p.connected) badges += '<span class="badge off">나감</span>';
+    else if (spectating) badges += '<span class="badge spectator">관전</span>';
+    else if ((s.phase === 'waiting' || s.phase === 'gameover') && p.ready) badges += '<span class="badge ready">준비</span>';
+    else if (s.phase === 'choosing' && p.hasChosen) badges += '<span class="badge chosen">선택함</span>';
+    if (s.phase === 'reveal' && p.roundWins > 0) badges += `<span class="badge win">+${p.roundWins}</span>`;
+
+    const choiceDisp = (s.phase === 'reveal' && p.choice) ? EMOJI[p.choice] : '';
+    const crown = isWinner ? '<span class="crown">👑</span>' : '';
+
+    li.innerHTML =
+      `<span class="pchoice">${choiceDisp}</span>` + crown +
+      `<span class="pname">${escapeHtml(p.name)}${p.id === myId ? ' (나)' : ''}</span>` +
+      badges +
+      `<span class="pscore">${p.score}</span>`;
+    list.appendChild(li);
+  });
+
+  // 최종 우승 오버레이 — 아직 '돌아가기'로 닫지 않았고 준비도 안 한 사람에게만 표시
+  // (닫거나 준비한 사람은 일반 화면의 리더보드·채팅·준비 버튼을 보게 함)
+  if (s.phase === 'gameover' && s.champions.length && !myReady && !overlayDismissed) {
+    const names = s.champions.map(id => nameOf(s, id)).join(', ');
+    $('champName').textContent = s.champions.length > 1 ? `공동 우승: ${names}` : `${names} 우승! 🎉`;
+    const ot = s.overtime ? ' · 🔥 연장 승부 끝에!' : '';
+    $('champScore').textContent = `${s.totalRounds}판 승부${ot} · 최종 점수 ${s.championScore}점`;
+    $('overlay').classList.remove('hidden');
+  } else {
+    $('overlay').classList.add('hidden');
+  }
+}
+
+// 선택 반영 (공통)
+function pick(choice) {
+  if (phase !== 'choosing' || !canPlay) return;
+  myChoice = choice;
+  ws.send(JSON.stringify({ type: 'choose', choice }));
+  document.querySelectorAll('.choice').forEach(c =>
+    c.classList.toggle('selected', c.dataset.c === myChoice));
+}
+
+// 선택 클릭
+document.querySelectorAll('.choice').forEach(el => {
+  el.onclick = () => pick(el.dataset.c);
+});
+
+// 랜덤 버튼 — ✊✋✌️ 중 무작위
+$('randomBtn').onclick = () => {
+  if (phase !== 'choosing') return;
+  const opts = ['rock', 'paper', 'scissors'];
+  pick(opts[Math.floor(Math.random() * opts.length)]);
+};
+
+// 준비 버튼 — 한 번 누르면 확정 (다시 안 눌러도 됨)
+$('readyBtn').onclick = () => {
+  if (myReady) return;
+  myReady = true;
+  ws.send(JSON.stringify({ type: 'ready', value: true }));
+};
+// 오버레이 '돌아가기' = 결과 화면만 닫고 일반 화면으로 (레디 안 함)
+// 이후 일반 화면에서 '준비'를 눌러야 다음 매치 준비됨
+$('playAgainBtn').onclick = () => {
+  overlayDismissed = true;
+  $('overlay').classList.add('hidden');
+};
+
+// 방 나가기 → 연결 종료하고 로그인 화면으로
+function leaveRoom() {
+  if (ws) { ws.onclose = null; try { ws.close(); } catch {} }
+  ws = null; inGame = false; myId = null; myReady = false; myChoice = null; phase = 'waiting'; overlayDismissed = false;
+  $('game').classList.add('hidden');
+  $('overlay').classList.add('hidden');
+  $('players').innerHTML = '';
+  $('chatlog').innerHTML = '';
+  // 로그인 화면 초기 상태로
+  $('createPanel').classList.add('hidden');
+  $('joinPanel').classList.add('hidden');
+  $('modeButtons').classList.remove('hidden');
+  $('loginError').classList.add('hidden');
+  $('login').classList.remove('hidden');
+}
+$('leaveBtn').onclick = leaveRoom;
+$('overlayLeaveBtn').onclick = leaveRoom;
+
+// 채팅
+$('chatsend').onclick = sendChat;
+$('chatinput').onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
+function sendChat() {
+  const t = $('chatinput').value.trim();
+  if (!t) return;
+  ws.send(JSON.stringify({ type: 'chat', text: t }));
+  $('chatinput').value = '';
+}
+function addChat(name, text) {
+  const log = $('chatlog');
+  const d = document.createElement('div');
+  d.innerHTML = `<b>${escapeHtml(name)}</b>: ${escapeHtml(text)}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "rps-multiplayer",
+  "version": "1.0.0",
+  "description": "실시간 멀티플레이어 가위바위보 (WebSocket)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
