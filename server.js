@@ -9,7 +9,9 @@ const PORT = process.env.PORT || 3000;
 
 // ---------- 정적 파일 서버 ----------
 const server = http.createServer((req, res) => {
-  let filePath = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  // 쿼리스트링(?room=... 등)을 먼저 제거한 뒤 경로 판별
+  const pathname = req.url.split('?')[0];
+  let filePath = (pathname === '/' || pathname === '') ? '/index.html' : pathname;
   filePath = path.join(__dirname, 'public', path.normalize(filePath));
   if (!filePath.startsWith(path.join(__dirname, 'public'))) {
     res.writeHead(403); res.end('forbidden'); return;
