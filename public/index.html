@@ -44,6 +44,12 @@
     margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14px;
     background: #7f1d1d; color: #fecaca; text-align: center;
   }
+  .invite-info {
+    margin: 6px 0 12px; padding: 12px; border-radius: 10px; text-align: center;
+    background: #0f172a; border: 1px solid #334155; color: #cbd5e1; font-size: 15px;
+  }
+  .invite-info b { color: #a5b4fc; }
+  .btn-invite { display: block; width: 100%; background: #0ea5e9; color: #fff; margin-top: 10px; }
 
   .status {
     text-align: center; font-size: 15px; margin: 8px 0 6px; min-height: 22px;
@@ -144,6 +150,12 @@
       <button class="btn-link" id="backFromJoin">← 뒤로</button>
     </div>
 
+    <!-- 초대 링크로 접속한 경우 (닉네임만 입력) -->
+    <div id="invitePanel" class="hidden">
+      <div class="invite-info">🔗 <b id="inviteRoomName"></b> 방에 초대되었습니다</div>
+      <button class="btn-primary" id="inviteJoinBtn">입장하기</button>
+    </div>
+
     <div id="loginError" class="error hidden"></div>
   </div>
 
@@ -164,6 +176,7 @@
 
     <ul class="players" id="players"></ul>
     <div class="roomtag" id="roomtag"></div>
+    <button class="btn-invite" id="copyInviteBtn">🔗 초대 링크 복사</button>
     <button class="btn-link" id="leaveBtn">방 나가기</button>
 
     <div id="chatbox">
@@ -188,9 +201,21 @@
 <script>
 const EMOJI = { rock: '✊', paper: '✋', scissors: '✌️' };
 
-let ws, myId = null, myChoice = null, myReady = false, phase = 'waiting', inGame = false, canPlay = true, overlayDismissed = false;
+let ws, myId = null, myChoice = null, myReady = false, phase = 'waiting', inGame = false, canPlay = true, overlayDismissed = false, currentRoom = null;
 
 const $ = (id) => document.getElementById(id);
+
+// 초대 링크(?room=...)로 접속한 경우: 방 선택 없이 닉네임만 받고 바로 입장
+const invitedRoom = new URLSearchParams(location.search).get('room');
+if (invitedRoom) {
+  $('modeButtons').classList.add('hidden');
+  $('invitePanel').classList.remove('hidden');
+  $('inviteRoomName').textContent = invitedRoom;
+}
+$('inviteJoinBtn').onclick = () => {
+  const name = $('name').value.trim() || '익명';
+  connect(name, invitedRoom, null, 'join');
+};
 
 // 모드 전환
 $('showCreate').onclick = () => { $('modeButtons').classList.add('hidden'); $('createPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
@@ -232,6 +257,7 @@ function handle(msg) {
     return;
   } else if (msg.type === 'joined') {
     myId = msg.id;
+    currentRoom = msg.room;
     inGame = true;
     $('login').classList.add('hidden');
     $('game').classList.remove('hidden');
@@ -432,13 +458,33 @@ function leaveRoom() {
   $('overlay').classList.add('hidden');
   $('players').innerHTML = '';
   $('chatlog').innerHTML = '';
-  // 로그인 화면 초기 상태로
+  // 로그인 화면 초기 상태로 (초대 링크로 들어온 경우엔 초대 화면으로 복귀)
   $('createPanel').classList.add('hidden');
   $('joinPanel').classList.add('hidden');
-  $('modeButtons').classList.remove('hidden');
   $('loginError').classList.add('hidden');
+  if (invitedRoom) {
+    $('modeButtons').classList.add('hidden');
+    $('invitePanel').classList.remove('hidden');
+  } else {
+    $('invitePanel').classList.add('hidden');
+    $('modeButtons').classList.remove('hidden');
+  }
   $('login').classList.remove('hidden');
 }
+
+// 초대 링크 복사 (현재 방 기준)
+$('copyInviteBtn').onclick = async () => {
+  const link = `${location.origin}/?room=${encodeURIComponent(currentRoom)}`;
+  const btn = $('copyInviteBtn');
+  const done = (txt) => { btn.textContent = txt; setTimeout(() => { btn.textContent = '🔗 초대 링크 복사'; }, 1800); };
+  try {
+    await navigator.clipboard.writeText(link);
+    done('✅ 복사됨! 친구에게 붙여넣기');
+  } catch {
+    // 클립보드 권한 없을 때: 링크를 직접 보여줌
+    window.prompt('초대 링크 (복사하세요):', link);
+  }
+};
 $('leaveBtn').onclick = leaveRoom;
 $('overlayLeaveBtn').onclick = leaveRoom;
 
