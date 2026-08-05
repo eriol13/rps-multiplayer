@@ -3,6 +3,7 @@
 // 화면 문구(이름·설명·아이콘)와 UI는 public/games/<id>.js 쪽에 있다.
 import rps from './rps.js';
 import quiz from './quiz.js';
+import fibbage from './fibbage.js';
 
-export const GAMES = { [rps.id]: rps, [quiz.id]: quiz };
+export const GAMES = { [rps.id]: rps, [quiz.id]: quiz, [fibbage.id]: fibbage };
 export const DEFAULT_GAME = rps.id;

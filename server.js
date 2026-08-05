@@ -191,6 +191,8 @@ function startStep(room) {
   const step = room.game.steps[room.stepIndex];
   room.step = step;
   room.phase = 'collect';
+  // 게임이 이 단계를 준비할 기회 (앞 단계 제출물을 모아 보기를 만드는 등)
+  if (room.game.stepStart) room.game.stepStart(room.g, room, step, participants(room));
   const secs = typeof step.seconds === 'function' ? step.seconds(room.g, room) : step.seconds;
   clearTimeout(room.timer);
   if (secs > 0) {

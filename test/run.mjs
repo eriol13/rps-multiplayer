@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const PORT = process.env.TEST_PORT || '3111';
-const SUITES = ['reconnect.test.mjs', 'quiz.test.mjs'];
+const SUITES = ['reconnect.test.mjs', 'quiz.test.mjs', 'fibbage.test.mjs'];
 
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 

@@ -112,6 +112,13 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .qopt.off:hover { filter: none; }
 .qnote { text-align: center; color: #94a3b8; font-size: 13px; margin-top: 10px; min-height: 18px; }
 
+/* 가짜 답 섞기 (Fibbage) */
+.qopt.mine { border-style: dashed; opacity: .6; }
+.fbmine { margin-left: auto; font-size: 11px; color: #94a3b8; white-space: nowrap; }
+.fbcol { display: flex; flex-direction: column; gap: 4px; }
+.fbmeta { font-size: 12px; color: #94a3b8; font-weight: 500; }
+.fbtruth { color: #4ade80; }
+
 .players { list-style: none; padding: 0; margin: 16px 0 0; }
 .player {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
