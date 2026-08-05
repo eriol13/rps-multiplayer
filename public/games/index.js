@@ -2,7 +2,13 @@
 import rps from './rps.js';
 import quiz from './quiz.js';
 import fibbage from './fibbage.js';
+import wavelength from './wavelength.js';
 
-export const GAMES = { [rps.id]: rps, [quiz.id]: quiz, [fibbage.id]: fibbage };
+export const GAMES = {
+  [rps.id]: rps,
+  [quiz.id]: quiz,
+  [fibbage.id]: fibbage,
+  [wavelength.id]: wavelength,
+};
 export const GAME_LIST = Object.values(GAMES);
 export const DEFAULT_GAME = rps.id;
