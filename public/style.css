@@ -1,4 +1,9 @@
 * { box-sizing: border-box; }
+
+/* 이 페이지는 어두운 테마다. 브라우저에게 알려줘야 폼 요소·스크롤바 같은
+   기본 UI가 같은 톤으로 따라오고, 크롬이 억지로 반전시키지 않는다. */
+:root { color-scheme: dark; }
+
 body {
   margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
   background: linear-gradient(135deg, #1e293b, #0f172a); color: #e2e8f0;
@@ -16,6 +21,9 @@ input {
   background: #0f172a; color: #e2e8f0; font-size: 15px; margin-bottom: 12px;
 }
 button {
+  /* color를 안 주면 브라우저 기본 버튼색(밝기 설정에 따라 달라짐)으로 떨어져
+     어두운 배경에서 글자가 사라진다. 기본값은 본문 색을 물려받게 둔다. */
+  color: inherit;
   cursor: pointer; border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
   padding: 12px 16px; transition: transform .08s, filter .15s;
 }
@@ -112,6 +120,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .gameopt {
   display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px;
   background: #0f172a; border: 2px solid #334155; cursor: pointer; text-align: left;
+  color: #e2e8f0;
 }
 .gameopt:hover { border-color: #475569; }
 .gameopt.selected { border-color: #6366f1; background: #312e81; }
