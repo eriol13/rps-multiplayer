@@ -146,6 +146,17 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .wvpt { color: #94a3b8; white-space: nowrap; }
 
+/* 누가 제일 ~할 것 같아 */
+.mllist { margin-top: 12px; }
+.mlrow { padding: 10px 12px; background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; margin-bottom: 8px; }
+.mlrow.win { border-color: #fbbf24; background: #29200a; }
+.mlhead { display: flex; justify-content: space-between; font-weight: 700; font-size: 15px; }
+.mlcount { color: #fbbf24; }
+.mlbar { height: 6px; background: #1e293b; border-radius: 999px; margin: 7px 0 6px; overflow: hidden; }
+.mlbar div { height: 100%; background: #6366f1; border-radius: 999px; }
+.mlrow.win .mlbar div { background: #fbbf24; }
+.mlvoters { font-size: 12px; color: #94a3b8; }
+
 .players { list-style: none; padding: 0; margin: 16px 0 0; }
 .player {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
