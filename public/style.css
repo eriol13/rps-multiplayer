@@ -1,0 +1,125 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(135deg, #1e293b, #0f172a); color: #e2e8f0;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.card {
+  position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+  padding: 24px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+h1 { margin: 0 0 4px; font-size: 22px; text-align: center; }
+.sub { text-align: center; color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+label { font-size: 13px; color: #94a3b8; display: block; margin-bottom: 4px; }
+input {
+  width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #475569;
+  background: #0f172a; color: #e2e8f0; font-size: 15px; margin-bottom: 12px;
+}
+button {
+  cursor: pointer; border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+  padding: 12px 16px; transition: transform .08s, filter .15s;
+}
+button:hover { filter: brightness(1.1); }
+button:active { transform: scale(.97); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: #6366f1; color: #fff; width: 100%; }
+.hidden { display: none !important; }
+
+.mode-row { display: flex; gap: 10px; margin-top: 6px; }
+.btn-create { flex: 1; background: #6366f1; color: #fff; }
+.btn-join { flex: 1; background: #0ea5e9; color: #fff; }
+.btn-link {
+  background: transparent; color: #94a3b8; width: 100%; margin-top: 8px;
+  font-weight: 500; padding: 8px;
+}
+.btn-link:hover { color: #e2e8f0; }
+.error {
+  margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14px;
+  background: #7f1d1d; color: #fecaca; text-align: center;
+}
+.invite-info {
+  margin: 6px 0 12px; padding: 12px; border-radius: 10px; text-align: center;
+  background: #0f172a; border: 1px solid #334155; color: #cbd5e1; font-size: 15px;
+}
+.invite-info b { color: #a5b4fc; }
+.btn-invite { display: block; width: 100%; background: #0ea5e9; color: #fff; margin-top: 10px; }
+
+/* 게임 고르기 */
+.gamepick { display: grid; gap: 8px; margin-bottom: 12px; }
+.gameopt {
+  display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px;
+  background: #0f172a; border: 2px solid #334155; cursor: pointer; text-align: left;
+}
+.gameopt:hover { border-color: #475569; }
+.gameopt.selected { border-color: #6366f1; background: #312e81; }
+.gameopt .ico { font-size: 26px; }
+.gameopt .txt { flex: 1; }
+.gameopt .nm { display: block; font-weight: 700; font-size: 15px; }
+.gameopt .ds { display: block; font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+.status {
+  text-align: center; font-size: 15px; margin: 8px 0 6px; min-height: 22px;
+  color: #a5b4fc; font-weight: 600;
+}
+.countdown { font-size: 40px; font-weight: 800; color: #f472b6; text-align: center; margin: 2px 0; }
+
+/* 라운드 결과 배너 */
+.banner {
+  text-align: center; font-size: 17px; font-weight: 800; padding: 12px; border-radius: 12px;
+  margin: 10px 0; background: #422006; color: #fde68a; border: 1px solid #92400e;
+}
+.banner.draw { background: #1e293b; color: #94a3b8; border-color: #475569; }
+
+/* 가위바위보 */
+.choices { display: flex; gap: 12px; justify-content: center; margin: 16px 0; }
+.choice {
+  font-size: 44px; width: 84px; height: 84px; border-radius: 16px; cursor: pointer;
+  background: #0f172a; border: 2px solid #475569; display: flex; align-items: center; justify-content: center;
+}
+.choice.selected { border-color: #6366f1; background: #312e81; }
+.btn-random { display: block; width: 100%; background: #334155; color: #e2e8f0; margin-bottom: 4px; }
+
+.players { list-style: none; padding: 0; margin: 16px 0 0; }
+.player {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;
+  background: #0f172a; margin-bottom: 8px; border: 1px solid #1e293b;
+}
+.player.me { border-color: #6366f1; }
+.player.gone { opacity: .45; }   /* 끊겨서 자리만 지키고 있는 사람 */
+.player.winner { border-color: #fbbf24; background: #29200a; }
+.pname { flex: 1; font-weight: 600; }
+.pscore { font-size: 18px; font-weight: 800; color: #fbbf24; min-width: 32px; text-align: right; }
+.pchoice { font-size: 24px; min-width: 26px; }
+.crown { font-size: 18px; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 700; }
+.badge.ready { background: #166534; color: #bbf7d0; }
+.badge.chosen { background: #1e40af; color: #bfdbfe; }
+.badge.win { background: #92400e; color: #fde68a; }
+.badge.off { background: #7f1d1d; color: #fecaca; }
+.badge.spectator { background: #334155; color: #cbd5e1; }
+.badge.host { background: #4c1d95; color: #ddd6fe; }
+
+.roomtag { text-align: center; color: #64748b; font-size: 12px; margin-top: 14px; }
+
+#chatbox { margin-top: 16px; }
+#chatlog {
+  height: 90px; overflow-y: auto; background: #0f172a; border-radius: 10px; padding: 8px;
+  font-size: 13px; border: 1px solid #1e293b;
+}
+#chatlog div { margin-bottom: 3px; }
+#chatlog b { color: #a5b4fc; }
+.chatrow { display: flex; gap: 8px; margin-top: 8px; }
+.chatrow input { margin: 0; }
+.chatrow button { background: #334155; color: #e2e8f0; }
+
+/* 최종 우승 오버레이 */
+#overlay {
+  position: absolute; inset: 0; background: rgba(15,23,42,.94); border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 24px; z-index: 10;
+}
+#overlay .trophy { font-size: 72px; animation: pop .5s ease; }
+#overlay .champ { font-size: 28px; font-weight: 800; margin: 8px 0; color: #fbbf24; }
+#overlay .final { color: #94a3b8; margin-bottom: 20px; }
+#overlay button { width: 80%; }
+@keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
