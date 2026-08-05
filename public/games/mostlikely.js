@@ -11,6 +11,7 @@ function ensure(root, key, html) {
 export default {
   id: 'mostlikely',
   name: '누가 제일 ~할 것 같아',
+  shortName: '누가 제일',   // 탭처럼 좁은 곳에서 쓰는 이름
   emoji: '👉',
   desc: '한 명을 지목하고, 다수가 뽑은 사람을 맞히기',
   minPlayers: 3,

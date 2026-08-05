@@ -38,6 +38,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .modalcard {
   background: #1e293b; border: 1px solid #334155; border-radius: 16px;
   width: 100%; max-width: 560px; max-height: 88vh; display: flex; flex-direction: column;
+  overflow: hidden;   /* 둥근 모서리 밖으로 내용이 삐져나오지 않게 */
 }
 .modalhead {
   display: flex; align-items: center; justify-content: space-between;
@@ -45,14 +46,16 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .modalx { background: transparent; color: #94a3b8; font-size: 18px; padding: 4px 10px; }
 .modalx:hover { color: #e2e8f0; }
+/* 탭이 다섯 개뿐이라 가로 스크롤 대신 줄바꿈으로 둔다.
+   스크롤로 두면 마지막 탭이 카드 경계에서 글자 중간에 잘리고,
+   스크롤된다는 표시도 없어서 그냥 깨져 보인다. */
 .tabbar {
-  display: flex; gap: 6px; padding: 12px 14px; overflow-x: auto;
-  border-bottom: 1px solid #334155; scrollbar-width: none;
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px;
+  border-bottom: 1px solid #334155;
 }
-.tabbar::-webkit-scrollbar { display: none; }
 .tabbar button {
-  flex: 0 0 auto; background: #0f172a; border: 1px solid #334155; color: #94a3b8;
-  font-size: 13px; padding: 8px 12px; white-space: nowrap;
+  flex: 0 1 auto; min-width: 0; background: #0f172a; border: 1px solid #334155;
+  color: #94a3b8; font-size: 13px; padding: 8px 12px;
 }
 .tabbar button.on { background: #312e81; border-color: #6366f1; color: #e2e8f0; }
 .modalbody { padding: 18px; overflow-y: auto; }

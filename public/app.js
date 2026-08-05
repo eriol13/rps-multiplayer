@@ -209,7 +209,7 @@ function guideSectionsHtml(g) {
 
 function renderGuide() {
   $('guideTabs').innerHTML = GAME_LIST.map(g =>
-    `<button type="button" data-g="${g.id}" class="${g.id === guideTab ? 'on' : ''}">${g.emoji} ${escapeHtml(g.name)}</button>`
+    `<button type="button" data-g="${g.id}" class="${g.id === guideTab ? 'on' : ''}">${g.emoji} ${escapeHtml(g.shortName || g.name)}</button>`
   ).join('');
   $('guideTabs').querySelectorAll('button').forEach(b => {
     b.onclick = () => { guideTab = b.dataset.g; renderGuide(); $('guideBody').scrollTop = 0; };
