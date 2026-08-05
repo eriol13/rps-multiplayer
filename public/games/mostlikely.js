@@ -109,6 +109,12 @@ export default {
     }
   },
 
+  // 지난 판 기록: 다수파를 맞혔는지 (roundScore 10점 이상이면 맞힌 것)
+  historyCell(e) {
+    if (!e.sub || !e.sub.vote) return '⏱';
+    return e.roundScore >= 10 ? '⭕' : '❌';
+  },
+
   subDisplay(p, s) {
     if (s.champions?.length && s.phase === 'gameover') return '';
     if (!p.sub || !p.sub.vote) return '⏱';

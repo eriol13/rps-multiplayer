@@ -158,6 +158,12 @@ export default {
     ].join('');
   },
 
+  // 지난 판 기록: 힌트 담당은 📡, 나머지는 어디를 찍었는지 숫자로
+  historyCell(e) {
+    if (e.sub && e.sub.clue != null) return '📡';
+    return e.sub && e.sub.guess != null ? String(e.sub.guess) : '⏱';
+  },
+
   subDisplay(p, s) {
     if (p.id === s.pickerId) return '📡';
     if (!p.sub || p.sub.guess == null) return '⏱';

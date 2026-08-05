@@ -155,6 +155,13 @@ export default {
     }
   },
 
+  // 지난 판 기록의 한 칸 — 그 문제를 맞혔는지는 roundScore로 알 수 있다
+  historyCell(e) {
+    if (e.sub && e.sub.ask) return '🖊';
+    if (!e.sub || e.sub.answer == null) return '⏱';
+    return e.roundScore > 0 ? '⭕' : '❌';
+  },
+
   // 결과 화면의 플레이어 줄에 ⭕/❌ 표시
   subDisplay(p, s) {
     const q = s.view && s.view.q;

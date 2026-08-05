@@ -31,6 +31,9 @@ const server = http.createServer((req, res) => {
 const REVEAL_SECONDS = 5;    // 결과 표시 시간
 const GRACE_MS = 30000;      // 연결이 끊긴 뒤 자리(점수)를 지켜주는 시간
 const ROOM_TTL_MS = 60000;   // 아무도 없는 방을 남겨두는 시간
+const MAX_BOTS = 3;          // 방당 봇 수 상한
+const REACT_COOLDOWN_MS = 500;
+const REACTIONS = ['👍', '😂', '😮', '😭', '🔥', '🤔', '👏', '💀'];
 
 /** @type {Map<string, Room>} */
 const rooms = new Map();
@@ -53,6 +56,7 @@ function getRoom(code, gameId, totalRounds) {
       deadline: 0,            // ms epoch, 카운트다운 표시용
       roundWinners: [],       // 직전 라운드 승자 id들
       banner: null,           // 결과 화면에 띄울 게임별 문구
+      history: [],            // 지난 라운드 기록 (누가 뭘 냈고 몇 점인지)
       champions: [],          // 최종 우승자 id들
       championScore: 0,
       hostId: null,           // 방을 만든 사람
@@ -67,6 +71,17 @@ function getRoom(code, gameId, totalRounds) {
 
 function alivePlayers(room) {
   return [...room.players.values()].filter(p => p.connected);
+}
+
+function humans(room) {
+  return alivePlayers(room).filter(p => !p.isBot);
+}
+
+// 봇이 예약해 둔 제출을 모두 취소 (단계가 끝나거나 방이 정리될 때)
+function clearBotTimers(room) {
+  for (const p of room.players.values()) {
+    if (p.moveTimer) { clearTimeout(p.moveTimer); p.moveTimer = null; }
+  }
 }
 
 // 이번 매치에 참여 중인 사람들 (관전자 제외)
@@ -105,6 +120,7 @@ function broadcast(room) {
     id: p.id,
     name: p.name,
     score: p.score,
+    isBot: !!p.isBot,
     connected: p.connected,
     ready: p.ready,
     playing: p.playing,
@@ -124,6 +140,8 @@ function broadcast(room) {
     countdown: room.deadline ? Math.max(0, Math.ceil((room.deadline - Date.now()) / 1000)) : 0,
     roundWinners: room.roundWinners,
     banner: room.banner,
+    history: room.history,
+    botsAllowed: !!room.game.botMove,
     champions: room.champions,
     championScore: room.championScore,
     hostId: room.hostId,
@@ -145,7 +163,9 @@ function broadcast(room) {
 function maybeStart(room) {
   if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
   const alive = alivePlayers(room);
-  if (alive.length >= (room.game.minPlayers || 2) && alive.every(p => p.ready)) {
+  const people = humans(room);
+  // 봇은 인원수에는 들어가지만 '준비'를 기다리지 않는다. 사람은 최소 1명 필요.
+  if (people.length >= 1 && alive.length >= (room.game.minPlayers || 2) && people.every(p => p.ready)) {
     startMatch(room);  // 새 매치: 점수·라운드 초기화 후 시작
   }
 }
@@ -159,6 +179,7 @@ function startMatch(room) {
   }
   room.round = 0;
   room.g = {};
+  room.history = [];
   room.roundWinners = [];
   room.banner = null;
   room.champions = [];
@@ -201,8 +222,29 @@ function startStep(room) {
   } else {
     room.deadline = 0;   // 제한시간 없음 — 전원 제출해야 넘어간다
   }
+  scheduleBotMoves(room, step, secs);
   broadcast(room);
   maybeAdvance(room);    // 낼 사람이 아예 없는 단계(출제자가 나감 등)는 그냥 통과
+}
+
+// 봇은 사람처럼 잠깐 뜸을 들였다가 낸다 (즉답하면 기계 티가 나고 화면도 안 보인다)
+function scheduleBotMoves(room, step, secs) {
+  clearBotTimers(room);
+  if (!room.game.botMove) return;
+  const limit = secs > 0 ? secs * 1000 - 500 : 4000;
+  for (const bot of eligible(room, step)) {
+    if (!bot.isBot) continue;
+    const delay = Math.min(limit, 900 + Math.floor(Math.random() * 2600));
+    bot.moveTimer = setTimeout(() => {
+      bot.moveTimer = null;
+      if (room.phase !== 'collect' || room.step !== step) return;
+      const msg = room.game.botMove(room.g, room, bot, step);
+      if (msg && room.game.submit(room.g, room, bot, step, msg)) {
+        broadcast(room);
+        maybeAdvance(room);
+      }
+    }, Math.max(300, delay));
+  }
 }
 
 // 이 단계에 낼 사람이 다 냈으면 기다리지 않고 넘어간다
@@ -224,6 +266,7 @@ function reveal(room) {
   room.phase = 'reveal';
   room.step = null;
   room.deadline = 0;
+  clearBotTimers(room);
 
   const parts = participants(room);
   const res = room.game.score(room.g, room, parts) || {};
@@ -233,6 +276,15 @@ function reveal(room) {
   }
   room.roundWinners = res.winners || [];
   room.banner = res.banner || null;
+
+  // 지난 판 기록 — 누가 뭘 냈는지 나중에 되돌아볼 수 있게
+  // (p.sub은 다음 라운드에서 새 객체로 교체되므로 그대로 들고 있어도 안전하다)
+  room.history.push({
+    round: room.round,
+    suddenDeath: room.suddenDeath,
+    winners: room.roundWinners,
+    entries: parts.map(p => ({ id: p.id, sub: p.sub, roundScore: p.roundScore || 0 })),
+  });
 
   broadcast(room);
 
@@ -286,6 +338,7 @@ function finishMatch(room, championIds, championScore) {
   room.step = null;
   room.suddenDeath = false;
   room.deadline = 0;
+  clearBotTimers(room);
   room.champions = championIds;
   room.championScore = championScore;
   for (const p of room.players.values()) { p.ready = false; p.sub = {}; }
@@ -293,6 +346,14 @@ function finishMatch(room, championIds, championScore) {
 }
 
 // ---------- 자리 유지 / 방 정리 ----------
+// 방 전체에 메시지 하나 보내기 (봇은 소켓이 없으니 자동으로 빠진다)
+function sendAll(room, obj) {
+  const out = JSON.stringify(obj);
+  for (const p of room.players.values()) {
+    if (p.connected && p.ws && p.ws.readyState === p.ws.OPEN) p.ws.send(out);
+  }
+}
+
 // 유예 시간이 지난 플레이어를 방에서 완전히 제거
 function dropPlayer(room, player) {
   if (!rooms.has(room.code)) return;
@@ -315,13 +376,45 @@ function reassignHost(room) {
 function scheduleRoomCleanup(room) {
   clearTimeout(room.emptyTimer);
   room.emptyTimer = null;
-  if (alivePlayers(room).length > 0) return;
+  if (humans(room).length > 0) return;   // 봇만 남은 방은 빈 방으로 본다
   room.emptyTimer = setTimeout(() => {
-    if (alivePlayers(room).length > 0) return;
+    if (humans(room).length > 0) return;
     clearTimeout(room.timer);
+    clearBotTimers(room);
     for (const p of room.players.values()) clearTimeout(p.dropTimer);
     rooms.delete(room.code);
   }, ROOM_TTL_MS);
+}
+
+// 방에 봇 한 명 추가 (게임이 botMove를 제공할 때만)
+function addBot(room) {
+  if (!room.game.botMove) return false;
+  const bots = [...room.players.values()].filter(p => p.isBot);
+  if (bots.length >= MAX_BOTS) return false;
+  const used = new Set(bots.map(b => b.botNo));
+  let no = 1;
+  while (used.has(no)) no += 1;
+  const bot = {
+    id: 'b' + (nextId++),
+    token: null, isBot: true, botNo: no,
+    name: `봇 ${no}`, ws: null,
+    score: 0, roundScore: 0, sub: {},
+    ready: true, connected: true,
+    dropTimer: null, moveTimer: null,
+    playing: true,
+  };
+  room.players.set(bot.id, bot);
+  return true;
+}
+
+// 마지막에 넣은 봇부터 제거
+function removeBot(room) {
+  const bots = [...room.players.values()].filter(p => p.isBot);
+  if (!bots.length) return false;
+  const bot = bots[bots.length - 1];
+  if (bot.moveTimer) clearTimeout(bot.moveTimer);
+  room.players.delete(bot.id);
+  return true;
 }
 
 // ---------- WebSocket ----------
@@ -364,8 +457,8 @@ wss.on('connection', (ws) => {
         return;
       }
 
-      // 접속자가 아무도 없는 방은 '없는 방'으로 본다 (정리 대기 중인 잔여 방)
-      const exists = !!prev && alivePlayers(prev).length > 0;
+      // 사람이 아무도 없는 방은 '없는 방'으로 본다 (정리 대기 중인 잔여 방)
+      const exists = !!prev && humans(prev).length > 0;
       if (mode === 'create' && !exists && prev) {
         clearTimeout(prev.timer); clearTimeout(prev.emptyTimer);
         for (const p of prev.players.values()) clearTimeout(p.dropTimer);
@@ -426,10 +519,18 @@ wss.on('connection', (ws) => {
     } else if (msg.type === 'chat') {
       const text = (msg.text || '').toString().slice(0, 200);
       if (!text) return;
-      const out = JSON.stringify({ type: 'chat', name: player.name, text });
-      for (const p of room.players.values()) {
-        if (p.connected && p.ws && p.ws.readyState === p.ws.OPEN) p.ws.send(out);
-      }
+      sendAll(room, { type: 'chat', name: player.name, text });
+    } else if (msg.type === 'react') {
+      if (!REACTIONS.includes(msg.emoji)) return;
+      const now = Date.now();
+      if (now - (player.lastReact || 0) < REACT_COOLDOWN_MS) return;   // 도배 방지
+      player.lastReact = now;
+      sendAll(room, { type: 'react', id: player.id, name: player.name, emoji: msg.emoji });
+    } else if (msg.type === 'addbot' || msg.type === 'removebot') {
+      // 봇은 대기 중에만 넣고 뺄 수 있다 (매치 도중 인원이 바뀌면 점수가 꼬인다)
+      if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
+      const ok = msg.type === 'addbot' ? addBot(room) : removeBot(room);
+      if (ok) { broadcast(room); maybeStart(room); }
     }
   });
 

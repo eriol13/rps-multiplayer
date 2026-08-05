@@ -20,6 +20,12 @@ export default {
     return true;
   },
 
+  // 봇은 그냥 무작위로 낸다. 사람의 습관을 읽는 봇은 오히려 이기기 어려워
+  // 혼자 놀 때 재미가 없다 — 여기서는 인원을 채우는 것이 목적이다.
+  botMove() {
+    return { value: CHOICES[Math.floor(Math.random() * CHOICES.length)] };
+  },
+
   score(g, room, parts) {
     for (const p of parts) {
       p.roundScore = 0;

@@ -39,4 +39,9 @@ export default {
   subDisplay(p) {
     return p.sub && p.sub.choose ? EMOJI[p.sub.choose] : '';
   },
+
+  // 지난 판 기록 표의 한 칸 — 무엇을 냈는지가 그대로 심리전 재료가 된다
+  historyCell(e) {
+    return e.sub && e.sub.choose ? EMOJI[e.sub.choose] : '–';
+  },
 };

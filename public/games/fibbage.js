@@ -126,6 +126,14 @@ export default {
     }).join('');
   },
 
+  // 지난 판 기록: 그 판의 보기 목록은 기록에 없어서 진짜를 맞혔는지는 알 수 없다.
+  // 대신 무슨 거짓말을 썼는지를 보여준다 — 이쪽이 되돌아보는 재미도 있다.
+  historyCell(e) {
+    if (!e.sub || !e.sub.bluff) return '⏱';
+    const t = e.sub.bluff;
+    return escapeHtml(t.length > 6 ? t.slice(0, 6) + '…' : t);
+  },
+
   subDisplay(p, s) {
     const opts = s.view && s.view.options;
     if (!opts) return '';

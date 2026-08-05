@@ -13,6 +13,7 @@ const SUITES = [
   'fibbage.test.mjs',
   'wavelength.test.mjs',
   'mostlikely.test.mjs',
+  'polish.test.mjs',
 ];
 
 const wait = (ms) => new Promise(r => setTimeout(r, ms));

@@ -68,7 +68,24 @@
 
     <button class="btn-primary" id="readyBtn">준비 완료</button>
 
+    <!-- 봇 (대기 중, 봇을 지원하는 게임에서만) -->
+    <div class="botrow hidden" id="botrow">
+      <span class="botlabel" id="botlabel">봇 0명</span>
+      <button id="botMinus">－</button>
+      <button id="botPlus">＋ 봇 추가</button>
+    </div>
+
     <ul class="players" id="players"></ul>
+
+    <!-- 이모지 리액션 -->
+    <div class="reactrow" id="reactrow"></div>
+
+    <!-- 지난 판 기록 -->
+    <details class="history hidden" id="historyBox">
+      <summary>📜 지난 판 기록</summary>
+      <div class="histwrap" id="historyBody"></div>
+    </details>
+
     <div class="roomtag" id="roomtag"></div>
     <button class="btn-invite" id="copyInviteBtn">🔗 초대 링크 복사</button>
     <button class="btn-link" id="leaveBtn">방 나가기</button>
@@ -88,6 +105,7 @@
     <div class="champ" id="champName"></div>
     <div class="final" id="champScore"></div>
     <button class="btn-primary" id="playAgainBtn">돌아가기</button>
+    <button class="btn-share" id="shareBtn">📤 결과 이미지로 저장·공유</button>
     <button class="btn-link" id="overlayLeaveBtn" style="width:80%">방 나가기</button>
   </div>
 </div>

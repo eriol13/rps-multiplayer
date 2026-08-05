@@ -9,6 +9,7 @@ let myId = null, currentRoom = null, currentGame = null;
 let myReady = false, mySub = null, phase = 'waiting', stepKey = null;
 let inGame = false, overlayDismissed = false;
 let pickedGame = DEFAULT_GAME;
+let lastState = null;   // 결과 이미지를 만들 때 쓴다
 
 // ---------- 세션 (새로고침·끊김에서 자리 복구) ----------
 // sessionStorage = 탭 단위. 새로고침엔 살아남고, 탭을 닫으면 사라진다.
@@ -150,9 +151,12 @@ function handle(msg) {
     $('login').classList.add('hidden');
     $('game').classList.remove('hidden');
   } else if (msg.type === 'state') {
+    lastState = msg;
     render(msg);
   } else if (msg.type === 'chat') {
     addChat(msg.name, msg.text);
+  } else if (msg.type === 'react') {
+    floatReaction(msg.name, msg.emoji);
   }
 }
 
@@ -167,10 +171,53 @@ function setGame(id) {
   if (g.mount) g.mount($('gamearea'));
 }
 
+// ---------- 이모지 리액션 ----------
+const REACTIONS = ['👍', '😂', '😮', '😭', '🔥', '🤔', '👏', '💀'];
+$('reactrow').innerHTML = REACTIONS.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('');
+$('reactrow').querySelectorAll('button').forEach(b => {
+  b.onclick = () => ws && ws.send(JSON.stringify({ type: 'react', emoji: b.dataset.e }));
+});
+
+// 카드 위로 떠오르는 이모지. 가로 위치를 조금씩 흩어 여러 개가 겹치지 않게 한다.
+function floatReaction(name, emoji) {
+  const card = document.querySelector('.card');
+  const el = document.createElement('div');
+  el.className = 'reactfloat';
+  el.innerHTML = `${emoji}<small>${escapeHtml(name)}</small>`;
+  el.style.left = (12 + Math.random() * 70) + '%';
+  el.style.bottom = '90px';
+  card.appendChild(el);
+  setTimeout(() => el.remove(), 1700);
+}
+
 // ---------- 렌더 ----------
 function nameOf(s, id) {
   const p = s.players.find(x => x.id === id);
   return p ? p.name : '?';
+}
+
+// 지난 판 기록 표 — 게임이 historyCell()을 제공할 때만 의미 있는 칸이 나온다
+function renderHistory(s) {
+  const box = $('historyBox');
+  if (!s.history || !s.history.length) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+
+  const cell = currentGame.historyCell;
+  const rows = [...s.players].sort((a, b) => b.score - a.score);
+  const head = s.history.map(h => `<th>${h.suddenDeath ? '연장' : h.round}</th>`).join('');
+  const body = rows.map(p => {
+    const tds = s.history.map(h => {
+      const e = h.entries.find(x => x.id === p.id);
+      if (!e) return '<td>·</td>';
+      const glyph = cell ? (cell(e, s) || '') : '';
+      const pts = e.roundScore ? `<div class="pts">+${e.roundScore}</div>` : '';
+      return `<td class="${h.winners.includes(p.id) ? 'win' : ''}">${glyph}${pts}</td>`;
+    }).join('');
+    return `<tr><td class="nm">${escapeHtml(p.name)}</td>${tds}<td class="nm">${p.score}</td></tr>`;
+  }).join('');
+
+  $('historyBody').innerHTML =
+    `<table><thead><tr><th></th>${head}<th>합계</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 function render(s) {
@@ -279,6 +326,20 @@ function render(s) {
     }
   } else rb.classList.add('hidden');
 
+  // 봇 조절 — 대기 중이고, 봇을 지원하는 게임일 때만
+  const botRow = $('botrow');
+  const bots = s.players.filter(p => p.isBot);
+  if (s.botsAllowed && (s.phase === 'waiting' || s.phase === 'gameover')) {
+    botRow.classList.remove('hidden');
+    $('botlabel').textContent = bots.length
+      ? `🤖 봇 ${bots.length}명이 함께 합니다`
+      : '혼자인가요? 봇을 넣어 바로 시작하세요';
+    $('botMinus').disabled = bots.length === 0;
+    $('botPlus').disabled = bots.length >= 3;
+  } else botRow.classList.add('hidden');
+
+  renderHistory(s);
+
   // 플레이어 목록 (점수 내림차순)
   const winnerSet = new Set(s.phase === 'reveal' ? s.roundWinners : (s.phase === 'gameover' ? s.champions : []));
   const list = $('players');
@@ -290,8 +351,9 @@ function render(s) {
 
     let badges = '';
     const spectating = p.playing === false && midMatch;
+    if (p.isBot) badges += '<span class="badge bot">봇</span>';
     if (!p.connected) badges += '<span class="badge off">나감</span>';
-    else if (spectating) badges += '<span class="badge spectator">관전</span>';
+    else if (spectating && !p.isBot) badges += '<span class="badge spectator">관전</span>';
     else if ((s.phase === 'waiting' || s.phase === 'gameover') && p.ready) badges += '<span class="badge ready">준비</span>';
     else if (s.phase === 'collect' && p.hasSubmitted) badges += '<span class="badge chosen">완료</span>';
     if (s.phase === 'reveal' && p.roundScore > 0) badges += `<span class="badge win">+${p.roundScore}</span>`;
@@ -336,6 +398,102 @@ $('readyBtn').onclick = () => {
 $('playAgainBtn').onclick = () => {
   overlayDismissed = true;
   $('overlay').classList.add('hidden');
+};
+
+// 봇 넣기/빼기
+$('botPlus').onclick = () => ws && ws.send(JSON.stringify({ type: 'addbot' }));
+$('botMinus').onclick = () => ws && ws.send(JSON.stringify({ type: 'removebot' }));
+
+// ---------- 결과 공유 카드 ----------
+// 최종 순위를 이미지 한 장으로 만들어, 공유가 되면 공유하고 아니면 내려받는다.
+function drawResultCard(s) {
+  const ranked = [...s.players].filter(p => p.playing !== false).sort((a, b) => b.score - a.score).slice(0, 8);
+  const W = 720;
+  const listTop = s.overtime ? 300 : 280;
+  const H = listTop + ranked.length * 72 + 110;   // 인원수에 맞춰 카드 높이를 정한다
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+
+  const bg = c.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#1e293b');
+  bg.addColorStop(1, '#0f172a');
+  c.fillStyle = bg; c.fillRect(0, 0, W, H);
+
+  c.textAlign = 'center';
+  c.fillStyle = '#e2e8f0';
+  c.font = 'bold 44px "Segoe UI", system-ui, sans-serif';
+  c.fillText(`${currentGame.emoji} ${currentGame.name}`, W / 2, 90);
+
+  c.fillStyle = '#94a3b8';
+  c.font = '22px "Segoe UI", system-ui, sans-serif';
+  const d = new Date();
+  const stamp = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  c.fillText(`방 ${s.room} · ${s.totalRounds}${currentGame.unit || '판'} · ${stamp}`, W / 2, 132);
+
+  const champs = s.champions.map(id => nameOf(s, id)).join(', ');
+  c.fillStyle = '#fbbf24';
+  c.font = 'bold 34px "Segoe UI", system-ui, sans-serif';
+  c.fillText('🏆 ' + (champs || '무승부'), W / 2, 210);
+  if (s.overtime) {
+    c.fillStyle = '#f472b6';
+    c.font = '20px "Segoe UI", system-ui, sans-serif';
+    c.fillText('🔥 연장 승부 끝에!', W / 2, 244);
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  let y = listTop;
+  c.textAlign = 'left';
+  ranked.forEach((p, i) => {
+    c.fillStyle = i === 0 ? '#29200a' : '#0f172a';
+    c.fillRect(70, y, W - 140, 62);
+    c.fillStyle = i === 0 ? '#fbbf24' : '#334155';
+    c.fillRect(70, y, 5, 62);
+
+    c.fillStyle = '#e2e8f0';
+    c.font = 'bold 26px "Segoe UI", system-ui, sans-serif';
+    c.fillText(`${medals[i] || ` ${i + 1}`}  ${p.name}${p.isBot ? ' 🤖' : ''}`, 100, y + 40);
+
+    c.textAlign = 'right';
+    c.fillStyle = '#fbbf24';
+    c.fillText(String(p.score), W - 100, y + 40);
+    c.textAlign = 'left';
+    y += 72;
+  });
+
+  c.textAlign = 'center';
+  c.fillStyle = '#64748b';
+  c.font = '20px "Segoe UI", system-ui, sans-serif';
+  c.fillText(location.host, W / 2, H - 46);
+  return cv;
+}
+
+$('shareBtn').onclick = async () => {
+  if (!lastState || !lastState.champions) return;
+  const btn = $('shareBtn');
+  const done = (t) => { btn.textContent = t; setTimeout(() => { btn.textContent = '📤 결과 이미지로 저장·공유'; }, 2200); };
+  try {
+    const cv = drawResultCard(lastState);
+    const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+    const file = new File([blob], `${currentGame.id}-${lastState.room}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: `${currentGame.name} 결과` });
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);   // 일부 브라우저는 문서에 붙어 있어야 클릭이 먹는다
+    a.click();
+    a.remove();
+    // 곧바로 revoke하면 다운로드가 시작되기 전에 URL이 무효화돼 파일이 깨진다
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    done('✅ 이미지로 저장했어요');
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;   // 사용자가 공유창을 닫음
+    done('⚠️ 이미지를 만들지 못했어요');
+  }
 };
 
 // 방 나가기 → 연결 종료하고 로그인 화면으로
