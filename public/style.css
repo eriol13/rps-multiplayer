@@ -132,6 +132,36 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .mode-row { display: flex; gap: 10px; margin-top: 6px; }
 .btn-create { flex: 1; background: #6366f1; color: #fff; }
 .btn-join { flex: 1; background: #0ea5e9; color: #fff; }
+/* 공개 방 목록 */
+#lobby { margin-top: 18px; }
+.lobbyhead {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; color: #94a3b8; margin-bottom: 8px;
+}
+.lobbyhead button {
+  background: transparent; border: 1px solid #334155; color: #94a3b8;
+  font-size: 12px; padding: 5px 10px; font-weight: 500;
+}
+.roomitem {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
+  padding: 11px 12px; margin-bottom: 7px; font-size: 14px; font-weight: 600;
+}
+.roomitem:hover { border-color: #6366f1; }
+.roomitem .ico { font-size: 20px; }
+.roomitem .who { flex: 1; }
+.roomitem .who small { display: block; font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 2px; }
+.roomitem .cnt { font-size: 12px; color: #a5b4fc; white-space: nowrap; }
+.lobbyempty {
+  text-align: center; color: #64748b; font-size: 13px; line-height: 1.7;
+  background: #0f172a; border: 1px dashed #334155; border-radius: 10px; padding: 16px 12px;
+}
+.checkrow {
+  display: flex; align-items: flex-start; gap: 8px; font-size: 13px;
+  color: #cbd5e1; margin: -4px 0 12px; cursor: pointer;
+}
+.checkrow input { width: auto; margin: 2px 0 0; flex: 0 0 auto; }
+
 .btn-link {
   background: transparent; color: #94a3b8; width: 100%; margin-top: 8px;
   font-weight: 500; padding: 8px;

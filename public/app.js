@@ -89,8 +89,11 @@ $('editorModal').onclick = (e) => { if (e.target === $('editorModal')) $('editor
 const invitedRoom = new URLSearchParams(location.search).get('room');
 if (invitedRoom) {
   $('modeButtons').classList.add('hidden');
+  $('lobby').classList.add('hidden');
   $('invitePanel').classList.remove('hidden');
   $('inviteRoomName').textContent = invitedRoom;
+} else {
+  loadLobby();
 }
 $('inviteJoinBtn').onclick = () => {
   connect($('name').value.trim() || '익명', invitedRoom, null, 'join');
@@ -115,17 +118,53 @@ $('giveUpReconnect').onclick = () => {
   $('login').classList.remove('hidden');
 };
 
-// 모드 전환
-$('showCreate').onclick = () => { $('modeButtons').classList.add('hidden'); $('createPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
-$('showJoin').onclick   = () => { $('modeButtons').classList.add('hidden'); $('joinPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
-$('backFromCreate').onclick = () => { $('createPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
-$('backFromJoin').onclick   = () => { $('joinPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+// ---------- 공개 방 목록 ----------
+const PHASE_LABEL = { waiting: '대기 중', collect: '진행 중', reveal: '진행 중', gameover: '끝나고 대기 중' };
+
+async function loadLobby() {
+  const box = $('lobbyList');
+  box.innerHTML = '<div class="lobbyempty">불러오는 중…</div>';
+  let rooms;
+  try {
+    const res = await fetch('/api/rooms', { cache: 'no-store' });
+    rooms = await res.json();
+  } catch {
+    box.innerHTML = '<div class="lobbyempty">방 목록을 불러오지 못했습니다.</div>';
+    return;
+  }
+  if (!Array.isArray(rooms) || !rooms.length) {
+    box.innerHTML = `<div class="lobbyempty">지금 열린 공개 방이 없어요.<br>
+      <b style="color:#a5b4fc">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
+    return;
+  }
+  box.innerHTML = rooms.map(r => {
+    const g = GAMES[r.game] || {};
+    const bots = r.players - r.humans;
+    return `<button type="button" class="roomitem" data-room="${escapeHtml(r.code)}">
+      <span class="ico">${g.emoji || '🎮'}</span>
+      <span class="who">${escapeHtml(r.code)}
+        <small>${escapeHtml(g.name || r.game)} · ${PHASE_LABEL[r.phase] || ''}</small></span>
+      <span class="cnt">${r.humans}명${bots > 0 ? ` +봇${bots}` : ''}</span>
+    </button>`;
+  }).join('');
+  box.querySelectorAll('.roomitem').forEach(b => {
+    b.onclick = () => connect($('name').value.trim() || '익명', b.dataset.room, null, 'join');
+  });
+}
+$('lobbyRefresh').onclick = loadLobby;
+
+// 모드 전환 — 목록은 첫 화면에서만 보인다
+const showLobby = (on) => $('lobby').classList.toggle('hidden', !on);
+$('showCreate').onclick = () => { $('modeButtons').classList.add('hidden'); showLobby(false); $('createPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+$('showJoin').onclick   = () => { $('modeButtons').classList.add('hidden'); showLobby(false); $('joinPanel').classList.remove('hidden'); $('loginError').classList.add('hidden'); };
+$('backFromCreate').onclick = () => { $('createPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); showLobby(true); $('loginError').classList.add('hidden'); loadLobby(); };
+$('backFromJoin').onclick   = () => { $('joinPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); showLobby(true); $('loginError').classList.add('hidden'); loadLobby(); };
 
 $('createBtn').onclick = () => {
   const name = $('name').value.trim() || '익명';
   const room = $('createRoom').value.trim() || 'lobby';
   const rounds = Math.min(20, Math.max(1, parseInt($('createRounds').value) || 3));
-  connect(name, room, rounds, 'create');
+  connect(name, room, rounds, 'create', null, $('createPublic').checked);
 };
 $('joinBtn').onclick = () => {
   const name = $('name').value.trim() || '익명';
@@ -141,10 +180,12 @@ function showLoginError(text) {
 }
 
 // ---------- 연결 ----------
-function connect(name, room, rounds, mode, token) {
+function connect(name, room, rounds, mode, token, isPublic) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', name, room, rounds, mode, token, game: pickedGame }));
+  ws.onopen = () => ws.send(JSON.stringify({
+    type: 'join', name, room, rounds, mode, token, game: pickedGame, public: !!isPublic,
+  }));
   ws.onmessage = (e) => handle(JSON.parse(e.data));
   ws.onclose = () => scheduleReconnect();
 }
@@ -637,9 +678,12 @@ function leaveRoom() {
   if (invitedRoom) {
     $('modeButtons').classList.add('hidden');
     $('invitePanel').classList.remove('hidden');
+    showLobby(false);
   } else {
     $('invitePanel').classList.add('hidden');
     $('modeButtons').classList.remove('hidden');
+    showLobby(true);
+    loadLobby();
   }
   $('login').classList.remove('hidden');
 }

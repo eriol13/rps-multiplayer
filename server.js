@@ -13,6 +13,26 @@ const PORT = process.env.PORT || 3000;
 const server = http.createServer((req, res) => {
   // 쿼리스트링(?room=... 등)을 먼저 제거한 뒤 경로 판별
   const pathname = req.url.split('?')[0];
+
+  // 공개 방 목록. 방은 이미 메모리에 있으므로 따로 저장할 것이 없다.
+  // 비공개 방은 이름조차 나가지 않는다.
+  if (pathname === '/api/rooms') {
+    const list = [...rooms.values()]
+      .filter(r => r.public && humans(r).length > 0)
+      .map(r => ({
+        code: r.code,
+        game: r.game.id,
+        players: alivePlayers(r).length,
+        humans: humans(r).length,
+        phase: r.phase,
+        totalRounds: r.totalRounds,
+      }))
+      .sort((a, b) => b.humans - a.humans);
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify(list));
+    return;
+  }
+
   let filePath = (pathname === '/' || pathname === '') ? '/index.html' : pathname;
   filePath = path.join(__dirname, 'public', path.normalize(filePath));
   if (!filePath.startsWith(path.join(__dirname, 'public'))) {
@@ -34,6 +54,30 @@ const ROOM_TTL_MS = 60000;   // 아무도 없는 방을 남겨두는 시간
 const MAX_BOTS = 3;          // 방당 봇 수 상한
 const REACT_COOLDOWN_MS = 500;
 const REACTIONS = ['👍', '😂', '😮', '😭', '🔥', '🤔', '👏', '💀'];
+const CHAT_COOLDOWN_MS = 700;   // 채팅 도배 막기
+
+// 낯선 사람이 들어오는 방이 생기므로 이름·방 이름을 서버에서 정리한다.
+// 특히 보이지 않는 문자로 빈 이름을 만드는 것을 막는다.
+const INVISIBLE = /[\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202f\u2060\ufeff]/g;
+
+function cleanName(raw) {
+  const s = String(raw == null ? '' : raw)
+    .replace(INVISIBLE, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 16);
+  return s || '익명';
+}
+
+function cleanCode(raw) {
+  const s = String(raw == null ? '' : raw)
+    .replace(INVISIBLE, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ_-]/g, '')
+    .slice(0, 16);
+  return s || 'lobby';
+}
 
 /** @type {Map<string, Room>} */
 const rooms = new Map();
@@ -60,6 +104,7 @@ function getRoom(code, gameId, totalRounds) {
       history: [],            // 지난 라운드 기록 (누가 뭘 냈고 몇 점인지)
       champions: [],          // 최종 우승자 id들
       championScore: 0,
+      public: false,          // 공개 방이면 첫 화면 목록에 뜬다
       hostId: null,           // 방을 만든 사람
       pickerId: null,         // 이번 라운드의 역할 담당(출제자 등), 게임이 정함
       suddenDeath: false,     // 연장 승부(무승부 결착) 진행 중 여부
@@ -435,8 +480,8 @@ wss.on('connection', (ws) => {
     try { msg = JSON.parse(raw); } catch { return; }
 
     if (msg.type === 'join') {
-      const name = (msg.name || '익명').toString().slice(0, 16);
-      const code = (msg.room || 'lobby').toString().slice(0, 16).toLowerCase();
+      const name = cleanName(msg.name);
+      const code = cleanCode(msg.room);
       const mode = msg.mode === 'join' ? 'join' : 'create';
       const token = typeof msg.token === 'string' ? msg.token : null;
 
@@ -483,6 +528,8 @@ wss.on('connection', (ws) => {
       }
       room = getRoom(code, msg.game, msg.rounds);
       clearTimeout(room.emptyTimer); room.emptyTimer = null;
+      // 공개 여부는 방을 만든 사람만 정한다. 기본은 비공개(초대 링크로만).
+      if (mode === 'create') room.public = !!msg.public;
       // 매치 진행 중(collect/reveal)에 들어오면 이번 매치는 관전, 다음 매치부터 참여
       const midMatch = room.phase === 'collect' || room.phase === 'reveal';
       player = {
@@ -522,8 +569,11 @@ wss.on('connection', (ws) => {
         maybeAdvance(room);
       }
     } else if (msg.type === 'chat') {
-      const text = (msg.text || '').toString().slice(0, 200);
+      const text = String(msg.text || '').replace(INVISIBLE, '').trim().slice(0, 200);
       if (!text) return;
+      const now = Date.now();
+      if (now - (player.lastChat || 0) < CHAT_COOLDOWN_MS) return;   // 도배 방지
+      player.lastChat = now;
       sendAll(room, { type: 'chat', name: player.name, text });
     } else if (msg.type === 'react') {
       if (!REACTIONS.includes(msg.emoji)) return;
