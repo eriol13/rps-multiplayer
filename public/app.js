@@ -1,6 +1,6 @@
 // 방·연결·재접속·공용 화면. 게임별 UI는 games/<id>.js 가 담당한다.
 import { GAMES, GAME_LIST, DEFAULT_GAME } from './games/index.js';
-import { escapeHtml } from './util.js';
+import { escapeHtml, downloadBlob } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -10,6 +10,10 @@ let myReady = false, mySub = null, phase = 'waiting', stepKey = null;
 let inGame = false, overlayDismissed = false;
 let pickedGame = DEFAULT_GAME;
 let lastState = null;   // 결과 이미지를 만들 때 쓴다
+// 미리 만든 문제 묶음. 서버는 내용을 되돌려주지 않으므로(정답이 들어 있다)
+// 편집기를 다시 열 때 쓸 원본은 여기 들고 있는다.
+let myDeck = [];
+let myDeckName = '';
 
 // ---------- 세션 (새로고침·끊김에서 자리 복구) ----------
 // sessionStorage = 탭 단위. 새로고침엔 살아남고, 탭을 닫으면 사라진다.
@@ -45,9 +49,40 @@ function syncRoundsField() {
   const g = GAMES[pickedGame];
   $('roundsLabel').innerHTML = `${g.roundsLabel || '몇 판'} <span style="color:#64748b">(1~20)</span>`;
   $('createRounds').value = g.defaultRounds || 3;
+  // 편집기가 있는 게임(퀴즈)에서만 '미리 만들기' 버튼을 보여준다
+  const btn = $('editorOpenCreate');
+  btn.classList.toggle('hidden', !g.editor);
+  if (g.editor) {
+    btn.textContent = myDeck.length
+      ? `📝 미리 만든 문제 ${myDeck.length}개 — 확인·수정`
+      : (g.editorLabel || '📝 문제 미리 만들기');
+  }
 }
 renderGamePicker();
 syncRoundsField();
+
+// ---------- 미리 만든 문제 묶음 ----------
+function openEditor(after) {
+  const g = GAMES[currentGame ? currentGame.id : pickedGame];
+  if (!g || !g.editor) return;
+  g.editor.open({
+    deck: myDeck,
+    name: myDeckName,
+    onApply: (deck, name) => {
+      myDeck = deck;
+      myDeckName = name || '';
+      syncRoundsField();
+      if (after) after(deck);
+    },
+  });
+}
+function sendDeck() {
+  if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'config', deck: myDeck }));
+}
+$('editorOpenCreate').onclick = () => openEditor();
+$('editorOpenRoom').onclick = () => openEditor(() => sendDeck());
+$('editorClose').onclick = () => $('editorModal').classList.add('hidden');
+$('editorModal').onclick = (e) => { if (e.target === $('editorModal')) $('editorModal').classList.add('hidden'); };
 
 // ---------- 진입 ----------
 // 초대 링크(?room=...)로 접속한 경우: 방 선택 없이 닉네임만 받고 바로 입장
@@ -150,6 +185,7 @@ function handle(msg) {
     $('reconnecting').classList.add('hidden');
     $('login').classList.add('hidden');
     $('game').classList.remove('hidden');
+    if (myDeck.length) sendDeck();   // 들어오기 전에 만들어 둔 문제가 있으면 올린다
   } else if (msg.type === 'state') {
     lastState = msg;
     render(msg);
@@ -404,6 +440,24 @@ function render(s) {
     }
   } else rb.classList.add('hidden');
 
+  // 매치 전 설정 — 방장만, 대기 중에만
+  const waiting = s.phase === 'waiting' || s.phase === 'gameover';
+  const iHost = s.hostId === myId;
+  const deckSize = (s.configInfo && s.configInfo.deckSize) || 0;
+  const edBtn = $('editorOpenRoom');
+  if (s.configurable && currentGame.editor && waiting && iHost) {
+    edBtn.classList.remove('hidden');
+    edBtn.textContent = deckSize
+      ? `📝 미리 만든 문제 ${deckSize}개 — 확인·수정`
+      : (currentGame.editorLabel || '📝 문제 미리 만들기');
+  } else edBtn.classList.add('hidden');
+
+  const badge = $('deckbadge');
+  if (deckSize && waiting) {
+    badge.classList.remove('hidden');
+    badge.textContent = `📋 미리 만든 문제 ${deckSize}개로 진행합니다`;
+  } else badge.classList.add('hidden');
+
   // 봇 조절 — 대기 중이고, 봇을 지원하는 게임일 때만
   const botRow = $('botrow');
   const bots = s.players.filter(p => p.isBot);
@@ -558,15 +612,7 @@ $('shareBtn').onclick = async () => {
       await navigator.share({ files: [file], title: `${currentGame.name} 결과` });
       return;
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);   // 일부 브라우저는 문서에 붙어 있어야 클릭이 먹는다
-    a.click();
-    a.remove();
-    // 곧바로 revoke하면 다운로드가 시작되기 전에 URL이 무효화돼 파일이 깨진다
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    downloadBlob(blob, file.name);
     done('✅ 이미지로 저장했어요');
   } catch (e) {
     if (e && e.name === 'AbortError') return;   // 사용자가 공유창을 닫음

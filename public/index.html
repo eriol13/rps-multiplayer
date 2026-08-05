@@ -37,6 +37,7 @@
       <input id="createRoom" placeholder="새 방 이름" maxlength="16" />
       <label id="roundsLabel">몇 판 <span style="color:#64748b">(1~20)</span></label>
       <input id="createRounds" type="number" min="1" max="20" value="3" />
+      <button class="btn-guide hidden" id="editorOpenCreate" style="margin:0 0 12px; width:100%"></button>
       <button class="btn-primary" id="createBtn">방 만들고 입장</button>
       <button class="btn-link" id="backFromCreate">← 뒤로</button>
     </div>
@@ -68,6 +69,10 @@
     <div id="gamearea"></div>
 
     <button class="btn-primary" id="readyBtn">준비 완료</button>
+
+    <!-- 매치 전 설정 (방장만) -->
+    <button class="btn-guide hidden" id="editorOpenRoom" style="width:100%"></button>
+    <div class="deckbadge hidden" id="deckbadge"></div>
 
     <!-- 봇 (대기 중, 봇을 지원하는 게임에서만) -->
     <div class="botrow hidden" id="botrow">
@@ -120,6 +125,18 @@
     </div>
     <div class="tabbar" id="guideTabs"></div>
     <div class="modalbody" id="guideBody"></div>
+  </div>
+</div>
+
+<!-- 퀴즈 편집기 -->
+<div class="modal hidden" id="editorModal">
+  <div class="modalcard">
+    <div class="modalhead">
+      <b>📝 퀴즈 문제 만들기</b>
+      <button class="modalx" id="editorClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="modalbody" id="editorBody"></div>
+    <div class="modalfoot" id="editorFoot"></div>
   </div>
 </div>
 

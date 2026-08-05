@@ -67,6 +67,39 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .tabbar button.on { background: #312e81; border-color: #6366f1; color: #e2e8f0; }
 .modalbody { padding: 18px; overflow-y: auto; }
+.modalfoot { padding: 14px 18px; border-top: 1px solid #334155; }
+.modalfoot:empty { display: none; }
+
+/* 퀴즈 편집기 */
+.ednotice {
+  background: #172554; border: 1px solid #1e40af; color: #bfdbfe;
+  padding: 10px 12px; border-radius: 10px; font-size: 13px; margin-bottom: 14px;
+}
+.edq { background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.edqhead { display: flex; align-items: center; gap: 8px; }
+.edno {
+  flex: 0 0 22px; height: 22px; border-radius: 999px; background: #312e81; color: #c7d2fe;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+}
+.edtext { flex: 1; font-size: 14px; font-weight: 600; }
+.edsec { font-size: 11px; color: #64748b; white-space: nowrap; }
+.edopts { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0 2px 30px; font-size: 12px; color: #94a3b8; }
+.edopts .ok { color: #4ade80; font-weight: 700; }
+.edrow { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+.edrow.wrap { flex-wrap: wrap; justify-content: flex-start; }
+.edrow button { background: #334155; color: #e2e8f0; font-size: 12px; padding: 6px 10px; }
+.edrow button.danger { background: #7f1d1d; color: #fecaca; }
+.edempty { color: #64748b; font-size: 13px; padding: 10px 0; }
+.edsaved {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #0f172a; border: 1px solid #1e293b; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+}
+.edsaved .edrow { margin-top: 0; }
+.edmeta { display: block; font-size: 11px; color: #64748b; margin-top: 2px; }
+.deckbadge {
+  display: block; margin-top: 8px; font-size: 12px; color: #a5b4fc;
+  background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; text-align: center;
+}
 
 .gdhead { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
 .gdsum { color: #94a3b8; font-size: 14px; margin-bottom: 14px; }

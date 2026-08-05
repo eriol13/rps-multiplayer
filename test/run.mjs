@@ -10,6 +10,7 @@ const PORT = process.env.TEST_PORT || '3111';
 const SUITES = [
   'reconnect.test.mjs',
   'quiz.test.mjs',
+  'quizdeck.test.mjs',
   'fibbage.test.mjs',
   'wavelength.test.mjs',
   'mostlikely.test.mjs',

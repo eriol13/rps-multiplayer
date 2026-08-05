@@ -1,5 +1,6 @@
 // 즉석 퀴즈 — 화면 담당 (규칙은 서버 games/quiz.js)
 import { escapeHtml } from '../util.js';
+import editor from './quiz-editor.js';
 
 const SHAPES = ['🔺', '🔷', '🟡', '🟩'];   // 보기 구분용 (Kahoot 스타일)
 
@@ -72,6 +73,10 @@ export default {
     },
     demoCaption: '결과 화면. 초록이 정답, 빨강이 내가 고른 오답입니다.',
   },
+
+  // 문제를 미리 만들어 두는 화면 (app.js가 '미리 만들기' 버튼으로 연다)
+  editor,
+  editorLabel: '📝 문제 미리 만들기 · 불러오기',
 
   mount(root) {
     root.dataset.qk = '';

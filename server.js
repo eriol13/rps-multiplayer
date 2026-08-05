@@ -44,7 +44,8 @@ function getRoom(code, gameId, totalRounds) {
     rooms.set(code, {
       code,
       game,                   // 규칙 모듈 (games/<id>.js)
-      g: {},                  // 게임이 자유롭게 쓰는 상태
+      g: {},                  // 게임이 자유롭게 쓰는 상태 (매치마다 초기화)
+      config: {},             // 매치 전에 정해두는 설정 (매치가 끝나도 유지)
       players: new Map(),     // id -> player
       phase: 'waiting',       // waiting | collect | reveal | gameover
       step: null,             // 지금 진행 중인 제출 단계
@@ -142,6 +143,10 @@ function broadcast(room) {
     banner: room.banner,
     history: room.history,
     botsAllowed: !!room.game.botMove,
+    // 설정 원본은 절대 내보내지 않는다 — 퀴즈 덱에는 정답이 들어 있다.
+    // 게임이 정한 '보여줘도 되는 요약'만 나간다.
+    configInfo: room.game.configView ? room.game.configView(room) : null,
+    configurable: !!room.game.configure,
     champions: room.champions,
     championScore: room.championScore,
     hostId: room.hostId,
@@ -526,6 +531,12 @@ wss.on('connection', (ws) => {
       if (now - (player.lastReact || 0) < REACT_COOLDOWN_MS) return;   // 도배 방지
       player.lastReact = now;
       sendAll(room, { type: 'react', id: player.id, name: player.name, emoji: msg.emoji });
+    } else if (msg.type === 'config') {
+      // 매치 전 설정 (예: 퀴즈에 미리 만든 문제 묶음 올리기).
+      // 진행 중에 바꾸면 판수·문제가 어긋나므로 대기 중에만 받는다.
+      if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
+      if (!room.game.configure) return;
+      if (room.game.configure(room, player, msg)) broadcast(room);
     } else if (msg.type === 'addbot' || msg.type === 'removebot') {
       // 봇은 대기 중에만 넣고 뺄 수 있다 (매치 도중 인원이 바뀌면 점수가 꼬인다)
       if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
