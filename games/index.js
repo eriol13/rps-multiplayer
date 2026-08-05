@@ -2,6 +2,7 @@
 // 각 모듈은 '규칙'만 담당하고, 방·준비·채팅·재접속·카운트다운은 server.js가 처리한다.
 // 화면 문구(이름·설명·아이콘)와 UI는 public/games/<id>.js 쪽에 있다.
 import rps from './rps.js';
+import quiz from './quiz.js';
 
-export const GAMES = { [rps.id]: rps };
+export const GAMES = { [rps.id]: rps, [quiz.id]: quiz };
 export const DEFAULT_GAME = rps.id;

@@ -79,6 +79,39 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .choice.selected { border-color: #6366f1; background: #312e81; }
 .btn-random { display: block; width: 100%; background: #334155; color: #e2e8f0; margin-bottom: 4px; }
 
+/* 즉석 퀴즈 */
+.qhint {
+  text-align: center; color: #94a3b8; font-size: 14px; line-height: 1.6;
+  padding: 18px 12px; background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; margin: 12px 0;
+}
+.qform { margin: 12px 0; }
+.qform input { margin-bottom: 8px; }
+.qoptrow { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.qoptrow input { margin: 0; }
+.qmark {
+  flex: 0 0 auto; width: 46px; padding: 12px 0; background: #0f172a;
+  border: 2px solid #475569; font-size: 18px;
+}
+.qmark.on { border-color: #22c55e; background: #052e16; }
+.qerr { margin-bottom: 8px; padding: 8px 10px; border-radius: 8px; background: #7f1d1d; color: #fecaca; font-size: 13px; }
+
+.qtext {
+  font-size: 19px; font-weight: 700; text-align: center; line-height: 1.5;
+  padding: 16px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 12px; margin: 12px 0;
+}
+.qopts { display: grid; gap: 8px; }
+.qopt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 14px 12px; background: #0f172a; border: 2px solid #475569; color: #e2e8f0; font-size: 15px;
+}
+.qopt .shape { font-size: 18px; }
+.qopt.picked { border-color: #6366f1; background: #312e81; }
+.qopt.correct { border-color: #22c55e; background: #052e16; }
+.qopt.wrong { border-color: #ef4444; background: #450a0a; }
+.qopt.off { cursor: default; }
+.qopt.off:hover { filter: none; }
+.qnote { text-align: center; color: #94a3b8; font-size: 13px; margin-top: 10px; min-height: 18px; }
+
 .players { list-style: none; padding: 0; margin: 16px 0 0; }
 .player {
   display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px;

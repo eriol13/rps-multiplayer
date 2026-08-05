@@ -200,13 +200,14 @@ function startStep(room) {
     room.deadline = 0;   // 제한시간 없음 — 전원 제출해야 넘어간다
   }
   broadcast(room);
+  maybeAdvance(room);    // 낼 사람이 아예 없는 단계(출제자가 나감 등)는 그냥 통과
 }
 
 // 이 단계에 낼 사람이 다 냈으면 기다리지 않고 넘어간다
 function maybeAdvance(room) {
   if (room.phase !== 'collect') return;
   const need = eligible(room, room.step);
-  if (need.length && need.every(p => hasSubmitted(room, p, room.step))) advanceStep(room);
+  if (need.every(p => hasSubmitted(room, p, room.step))) advanceStep(room);
 }
 
 function advanceStep(room) {
