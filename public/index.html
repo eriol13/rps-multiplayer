@@ -78,6 +78,7 @@
     background: #0f172a; margin-bottom: 8px; border: 1px solid #1e293b;
   }
   .player.me { border-color: #6366f1; }
+  .player.gone { opacity: .45; }   /* 끊겨서 자리만 지키고 있는 사람 */
   .player.winner { border-color: #fbbf24; background: #29200a; }
   .pname { flex: 1; font-weight: 600; }
   .pscore { font-size: 18px; font-weight: 800; color: #fbbf24; min-width: 32px; text-align: right; }
@@ -120,6 +121,12 @@
 <div class="card">
   <h1>✊✋✌ 멀티플레이어 가위바위보</h1>
   <div class="sub">여러 명이 동시에 · 실시간 WebSocket</div>
+
+  <!-- 재접속 중 -->
+  <div id="reconnecting" class="hidden">
+    <div class="invite-info">🔄 <b>다시 연결하는 중…</b><br><span style="font-size:13px;color:#94a3b8">이전 게임으로 돌아갑니다</span></div>
+    <button class="btn-link" id="giveUpReconnect">← 그만두고 처음부터</button>
+  </div>
 
   <!-- 로그인 -->
   <div id="login">
@@ -205,6 +212,22 @@ let ws, myId = null, myChoice = null, myReady = false, phase = 'waiting', inGame
 
 const $ = (id) => document.getElementById(id);
 
+// ---------- 세션 (새로고침·끊김에서 자리 복구) ----------
+// sessionStorage = 탭 단위. 새로고침엔 살아남고, 탭을 닫으면 사라진다.
+const SESSION_KEY = 'minigame.session';
+const RECONNECT_TRIES = 12, RECONNECT_DELAY = 2000;   // 최대 ~24초 (서버 유예 30초 안쪽)
+let reconnectTries = 0;
+
+function saveSession(room, token, name) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ room, token, name })); } catch {}
+}
+function loadSession() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch {}
+}
+
 // 초대 링크(?room=...)로 접속한 경우: 방 선택 없이 닉네임만 받고 바로 입장
 const invitedRoom = new URLSearchParams(location.search).get('room');
 if (invitedRoom) {
@@ -215,6 +238,25 @@ if (invitedRoom) {
 $('inviteJoinBtn').onclick = () => {
   const name = $('name').value.trim() || '익명';
   connect(name, invitedRoom, null, 'join');
+};
+
+// 새로고침으로 들어온 경우: 저장된 자리로 바로 복귀 시도
+// (단, 다른 방 초대 링크를 눌러 들어온 거면 그 방을 우선한다)
+const saved = loadSession();
+if (saved && saved.token && (!invitedRoom || invitedRoom === saved.room)) {
+  $('login').classList.add('hidden');
+  $('reconnecting').classList.remove('hidden');
+  connect(saved.name, saved.room, null, 'join', saved.token);
+} else if (saved) {
+  clearSession();
+}
+
+$('giveUpReconnect').onclick = () => {
+  clearSession();
+  reconnectTries = RECONNECT_TRIES;
+  if (ws) { ws.onclose = null; try { ws.close(); } catch {} ws = null; }
+  $('reconnecting').classList.add('hidden');
+  $('login').classList.remove('hidden');
 };
 
 // 모드 전환
@@ -242,23 +284,46 @@ function showLoginError(text) {
   el.classList.remove('hidden');
 }
 
-function connect(name, room, rounds, mode) {
+function connect(name, room, rounds, mode, token) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', name, room, rounds, mode }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'join', name, room, rounds, mode, token }));
   ws.onmessage = (e) => handle(JSON.parse(e.data));
-  ws.onclose = () => { if (inGame) $('status').textContent = '연결이 끊겼습니다. 새로고침하세요.'; };
+  ws.onclose = () => scheduleReconnect();
+}
+
+// 연결이 끊기면 저장된 토큰으로 자동 재입장 시도 (서버가 자리를 30초 지켜준다)
+function scheduleReconnect() {
+  const s = loadSession();
+  if (!s || !s.token) return;
+  if (reconnectTries >= RECONNECT_TRIES) {
+    clearSession();
+    $('reconnecting').classList.add('hidden');
+    if (inGame) $('status').textContent = '연결이 끊겼습니다. 새로고침하세요.';
+    else { $('login').classList.remove('hidden'); showLoginError('연결에 실패했습니다. 다시 입장해 주세요.'); }
+    return;
+  }
+  reconnectTries++;
+  if (inGame) $('status').textContent = `🔄 연결이 끊겼습니다. 다시 연결하는 중… (${reconnectTries}/${RECONNECT_TRIES})`;
+  setTimeout(() => connect(s.name, s.room, null, 'join', s.token), RECONNECT_DELAY);
 }
 
 function handle(msg) {
   if (msg.type === 'error') {
+    clearSession();
+    reconnectTries = RECONNECT_TRIES;   // 서버가 거절한 것이므로 재시도하지 않음
+    $('reconnecting').classList.add('hidden');
+    $('login').classList.remove('hidden');
     showLoginError(msg.message);
-    if (ws) ws.close();
+    if (ws) { ws.onclose = null; ws.close(); }
     return;
   } else if (msg.type === 'joined') {
     myId = msg.id;
     currentRoom = msg.room;
     inGame = true;
+    reconnectTries = 0;
+    saveSession(msg.room, msg.token, $('name').value.trim() || (loadSession()?.name) || '익명');
+    $('reconnecting').classList.add('hidden');
     $('login').classList.add('hidden');
     $('game').classList.remove('hidden');
   } else if (msg.type === 'state') {
@@ -288,10 +353,13 @@ function render(s) {
   $('roomtag').textContent = `방: ${s.room} · ${s.totalRounds}판 승부`;
 
   // 상태 텍스트
+  // 준비 인원은 접속 중인 사람 기준 (끊긴 사람은 자리만 남아 있고 시작을 막지 않음)
+  const live = s.players.filter(p => p.connected);
+  const readyCount = live.filter(p => p.ready).length;
+
   let statusText = '';
   if (s.phase === 'waiting') {
-    const ready = s.players.filter(p => p.ready).length;
-    statusText = `대기 중 · 준비 ${ready}/${s.players.length}명 (2명 이상 전원 준비 시 시작)`;
+    statusText = `대기 중 · 준비 ${readyCount}/${live.length}명 (2명 이상 전원 준비 시 시작)`;
   } else if (s.phase === 'choosing') {
     if (iSpectator) {
       statusText = `👀 관전 중 · 다음 매치부터 참여합니다`;
@@ -306,8 +374,7 @@ function render(s) {
     if (iSpectator) statusText = `👀 관전 중 · 다음 매치부터 참여합니다`;
     else statusText = s.suddenDeath ? `🔥 연장 승부 결과` : `라운드 ${s.round} / ${s.totalRounds} 결과`;
   } else if (s.phase === 'gameover') {
-    const ready = s.players.filter(p => p.ready).length;
-    statusText = `게임 종료! 다시 시작 준비 ${ready}/${s.players.length}명 (전원 준비 시 시작)`;
+    statusText = `게임 종료! 다시 시작 준비 ${readyCount}/${live.length}명 (전원 준비 시 시작)`;
   }
   $('status').textContent = statusText;
 
@@ -362,16 +429,14 @@ function render(s) {
   const rb = $('readyBtn');
   if (s.phase === 'waiting' || s.phase === 'gameover') {
     rb.classList.remove('hidden');
-    const readyCount = s.players.filter(p => p.ready).length;
-    const total = s.players.length;
     if (myReady) {
       rb.disabled = true;
       rb.style.background = '#334155';
-      rb.textContent = `대기 중… (준비 ${readyCount}/${total}명)`;
+      rb.textContent = `대기 중… (준비 ${readyCount}/${live.length}명)`;
     } else {
       rb.disabled = false;
       rb.style.background = '#6366f1';
-      rb.textContent = `준비 완료 (준비 ${readyCount}/${total}명)`;
+      rb.textContent = `준비 완료 (준비 ${readyCount}/${live.length}명)`;
     }
   } else rb.classList.add('hidden');
 
@@ -382,7 +447,7 @@ function render(s) {
   [...s.players].sort((a, b) => b.score - a.score).forEach(p => {
     const li = document.createElement('li');
     const isWinner = winnerSet.has(p.id);
-    li.className = 'player' + (p.id === myId ? ' me' : '') + (isWinner ? ' winner' : '');
+    li.className = 'player' + (p.id === myId ? ' me' : '') + (isWinner ? ' winner' : '') + (p.connected ? '' : ' gone');
 
     let badges = '';
     const spectating = p.playing === false && (s.phase === 'choosing' || s.phase === 'reveal');
@@ -452,8 +517,11 @@ $('playAgainBtn').onclick = () => {
 
 // 방 나가기 → 연결 종료하고 로그인 화면으로
 function leaveRoom() {
+  clearSession();   // 스스로 나간 것이므로 자리를 되찾지 않는다
   if (ws) { ws.onclose = null; try { ws.close(); } catch {} }
   ws = null; inGame = false; myId = null; myReady = false; myChoice = null; phase = 'waiting'; overlayDismissed = false;
+  reconnectTries = 0;
+  $('reconnecting').classList.add('hidden');
   $('game').classList.add('hidden');
   $('overlay').classList.add('hidden');
   $('players').innerHTML = '';

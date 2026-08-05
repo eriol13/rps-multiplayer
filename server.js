@@ -2,6 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import { WebSocketServer } from 'ws';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,8 @@ const server = http.createServer((req, res) => {
 const CHOICES = ['rock', 'paper', 'scissors'];
 const CHOOSE_SECONDS = 10;   // 선택 시간
 const REVEAL_SECONDS = 5;    // 결과 표시 시간
+const GRACE_MS = 30000;      // 연결이 끊긴 뒤 자리(점수)를 지켜주는 시간
+const ROOM_TTL_MS = 60000;   // 아무도 없는 방을 남겨두는 시간
 
 /** @type {Map<string, Room>} */
 const rooms = new Map();
@@ -42,6 +45,7 @@ function getRoom(code, totalRounds) {
       round: 0,
       totalRounds: Math.min(20, Math.max(1, parseInt(totalRounds) || 3)),
       timer: null,
+      emptyTimer: null,       // 아무도 없을 때 방을 정리하는 타이머
       deadline: 0,            // ms epoch, 카운트다운 표시용
       roundWinners: [],       // 직전 라운드 승자 id들
       champions: [],          // 최종 우승자 id들
@@ -108,8 +112,32 @@ function broadcast(room) {
     players,
   });
   for (const p of room.players.values()) {
-    if (p.connected && p.ws.readyState === p.ws.OPEN) p.ws.send(msg);
+    if (p.connected && p.ws && p.ws.readyState === p.ws.OPEN) p.ws.send(msg);
   }
+}
+
+// 유예 시간이 지난 플레이어를 방에서 완전히 제거
+function dropPlayer(room, player) {
+  if (!rooms.has(room.code)) return;
+  room.players.delete(player.id);
+  broadcast(room);
+  maybeStart(room);
+  maybeReveal(room);
+  scheduleRoomCleanup(room);
+}
+
+// 접속자가 0명이 되면 방을 바로 지우지 않고 잠시 남겨둔다
+// (마지막 사람이 새로고침해도 방·점수가 살아있게)
+function scheduleRoomCleanup(room) {
+  clearTimeout(room.emptyTimer);
+  room.emptyTimer = null;
+  if (alivePlayers(room).length > 0) return;
+  room.emptyTimer = setTimeout(() => {
+    if (alivePlayers(room).length > 0) return;
+    clearTimeout(room.timer);
+    for (const p of room.players.values()) clearTimeout(p.dropTimer);
+    rooms.delete(room.code);
+  }, ROOM_TTL_MS);
 }
 
 function maybeStart(room) {
@@ -258,7 +286,37 @@ wss.on('connection', (ws) => {
       const name = (msg.name || '익명').toString().slice(0, 16);
       const code = (msg.room || 'lobby').toString().slice(0, 16).toLowerCase();
       const mode = msg.mode === 'join' ? 'join' : 'create';
-      const exists = rooms.has(code);
+      const token = typeof msg.token === 'string' ? msg.token : null;
+
+      // 재접속: 같은 토큰의 자리가 아직 남아 있으면 점수·순번 그대로 복구
+      const prev = rooms.get(code);
+      const seat = token && prev ? [...prev.players.values()].find(p => p.token === token) : null;
+      if (seat) {
+        room = prev;
+        player = seat;
+        clearTimeout(player.dropTimer); player.dropTimer = null;
+        clearTimeout(room.emptyTimer);  room.emptyTimer = null;
+        // 다른 탭이 아직 이 자리를 붙들고 있으면 넘겨받는다
+        const old = player.ws;
+        player.ws = ws;
+        player.connected = true;
+        player.name = name;
+        if (old && old !== ws && old.readyState === old.OPEN) { try { old.close(); } catch {} }
+        ws.send(JSON.stringify({
+          type: 'joined', id: player.id, token: player.token,
+          room: code, totalRounds: room.totalRounds, reconnected: true,
+        }));
+        broadcast(room);
+        return;
+      }
+
+      // 접속자가 아무도 없는 방은 '없는 방'으로 본다 (정리 대기 중인 잔여 방)
+      const exists = !!prev && alivePlayers(prev).length > 0;
+      if (mode === 'create' && !exists && prev) {
+        clearTimeout(prev.timer); clearTimeout(prev.emptyTimer);
+        for (const p of prev.players.values()) clearTimeout(p.dropTimer);
+        rooms.delete(code);   // 잔여 방을 치우고 새로 만든다
+      }
       if (mode === 'create' && exists) {
         ws.send(JSON.stringify({ type: 'error', message: `'${code}' 방이 이미 있어요. 입장하기로 들어가세요.` }));
         return;
@@ -268,17 +326,20 @@ wss.on('connection', (ws) => {
         return;
       }
       room = getRoom(code, msg.rounds);
+      clearTimeout(room.emptyTimer); room.emptyTimer = null;
       // 매치 진행 중(choosing/reveal)에 들어오면 이번 매치는 관전, 다음 매치부터 참여
       const midMatch = room.phase === 'choosing' || room.phase === 'reveal';
       player = {
         id: 'p' + (nextId++),
+        token: randomUUID(),  // 재접속 시 자리를 되찾는 열쇠
         name, ws,
         score: 0, roundWins: 0,
         choice: null, ready: false, connected: true,
+        dropTimer: null,
         playing: !midMatch,   // false면 관전자
       };
       room.players.set(player.id, player);
-      ws.send(JSON.stringify({ type: 'joined', id: player.id, room: code, totalRounds: room.totalRounds }));
+      ws.send(JSON.stringify({ type: 'joined', id: player.id, token: player.token, room: code, totalRounds: room.totalRounds }));
       broadcast(room);
       return;
     }
@@ -304,23 +365,23 @@ wss.on('connection', (ws) => {
       if (!text) return;
       const out = JSON.stringify({ type: 'chat', name: player.name, text });
       for (const p of room.players.values()) {
-        if (p.connected && p.ws.readyState === p.ws.OPEN) p.ws.send(out);
+        if (p.connected && p.ws && p.ws.readyState === p.ws.OPEN) p.ws.send(out);
       }
     }
   });
 
   ws.on('close', () => {
     if (!player || !room) return;
+    if (player.ws !== ws) return;   // 다른 연결이 이미 이 자리를 넘겨받음
     player.connected = false;
-    room.players.delete(player.id);
-    if (alivePlayers(room).length === 0) {
-      clearTimeout(room.timer);
-      rooms.delete(room.code);
-    } else {
-      broadcast(room);
-      maybeStart(room);
-      maybeReveal(room);
-    }
+    player.ws = null;
+    // 바로 지우지 않고 유예 — 새로고침·일시적 끊김이면 점수 그대로 돌아온다
+    clearTimeout(player.dropTimer);
+    player.dropTimer = setTimeout(() => dropPlayer(room, player), GRACE_MS);
+    broadcast(room);
+    maybeStart(room);
+    maybeReveal(room);
+    scheduleRoomCleanup(room);
   });
 });
 
