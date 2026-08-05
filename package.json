@@ -1,11 +1,12 @@
 {
-  "name": "rps-multiplayer",
+  "name": "minigame",
   "version": "1.0.0",
-  "description": "실시간 멀티플레이어 가위바위보 (WebSocket)",
+  "description": "실시간 멀티플레이어 미니게임 (WebSocket)",
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node test/run.mjs"
   },
   "engines": {
     "node": ">=18"
