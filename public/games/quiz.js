@@ -35,6 +35,44 @@ export default {
   roundsLabel: '몇 문제',
   unit: '문제',
 
+  guide: {
+    players: '2명 이상',
+    role: '방장이 계속 출제',
+    flow: [
+      {
+        title: '방장이 그 자리에서 문제를 만든다',
+        body: '미리 문제집을 준비할 필요가 없습니다. 게임이 시작되면 방장 화면에 입력칸이 뜨고, 문제 · 보기 2~4개 · 정답 · 제한시간(5~60초)을 직접 정해서 냅니다. 이 단계에는 제한시간이 없으니 천천히 써도 됩니다.',
+      },
+      {
+        title: '나머지가 제한시간 안에 답을 고른다',
+        body: '방장이 정한 시간 동안 카운트다운이 돌아갑니다. 한 번 고르면 바꿀 수 없고, 전원이 다 고르면 시간을 안 기다리고 바로 결과로 넘어갑니다.',
+      },
+      {
+        title: '정답 공개 — 빨리 맞힌 만큼 더 받는다',
+        body: '정답이 초록으로 표시되고, 누가 무엇을 골랐는지 함께 공개됩니다. 맞히기만 하면 되는 게 아니라 얼마나 빨리 눌렀는지가 점수를 가릅니다.',
+      },
+    ],
+    scoring: [
+      ['정답을 맞히면', '+10점'],
+      ['남은 시간에 비례해 추가', '최대 +10점'],
+      ['오답 · 시간 초과', '0점'],
+      ['출제자(방장)', '점수 없음'],
+    ],
+    tips: [
+      '정답은 출제자 화면과 결과 화면에만 내려갑니다. 개발자도구로 미리 볼 수 없습니다.',
+      '출제자는 점수를 받지 않습니다 — 진행을 맡는 자리라고 보시면 됩니다.',
+      '방장이 나가면 남은 사람이 다음 문제부터 출제를 이어받습니다.',
+    ],
+    demo() {
+      const opts = ['서울', '부산', '대구'];
+      return `<div class="qtext">대한민국의 수도는?</div>
+        <div class="qopts">${opts.map((t, i) =>
+          `<button type="button" class="qopt off${i === 0 ? ' correct' : ''}${i === 2 ? ' picked wrong' : ''}">
+            <span class="shape">${SHAPES[i]}</span><span>${t}</span></button>`).join('')}</div>`;
+    },
+    demoCaption: '결과 화면. 초록이 정답, 빨강이 내가 고른 오답입니다.',
+  },
+
   mount(root) {
     root.dataset.qk = '';
     root.innerHTML = '';
@@ -60,12 +98,7 @@ export default {
     const iAsk = s.pickerId === api.myId;
     const q = s.view && s.view.q;
 
-    // 대기 / 종료 화면에서는 게임 영역을 비운다
-    if (s.phase === 'waiting' || s.phase === 'gameover') {
-      ensure(root, 'idle', `<div class="qhint">방장이 문제를 내고, 나머지가 맞히는 게임입니다.<br>
-        문제는 미리 준비할 필요 없이 게임 중에 그때그때 입력합니다.</div>`);
-      return;
-    }
+    // 대기 / 종료 화면은 app.js가 규칙 요약으로 그린다 (guide 하나에서 나온다)
 
     // ---- 출제 단계 ----
     if (s.phase === 'collect' && s.step === 'ask') {

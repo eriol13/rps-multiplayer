@@ -19,6 +19,53 @@ export default {
   roundsLabel: '몇 문제',
   unit: '문제',
 
+  guide: {
+    players: '3명 이상',
+    length: '한 문제 1분쯤',
+    flow: [
+      {
+        title: '빈칸 문제가 나온다',
+        body: '"문어의 심장은 ___개다" 처럼 빈칸이 뚫린 문제가 나옵니다. 문제는 앱에 들어 있어서 아무도 준비할 필요가 없고, 답을 아는 사람도 보통 없습니다.',
+      },
+      {
+        title: '전원이 그럴듯한 가짜 답을 몰래 쓴다 (45초)',
+        body: '진짜 답이 아니라, 남들이 진짜라고 믿을 만한 거짓말을 지어냅니다. 이 단계에서는 아무도 남의 답을 볼 수 없습니다.',
+      },
+      {
+        title: '진짜 답과 남들의 거짓말이 섞여 나온다 (25초)',
+        body: '섞인 보기 중에서 진짜를 고릅니다. 내가 쓴 거짓말은 점선으로 잠겨서 고를 수 없습니다. 누가 무엇을 썼는지는 아직 보이지 않습니다.',
+      },
+      {
+        title: '전부 공개',
+        body: '어떤 게 진짜였는지, 각 거짓말을 누가 썼고 누가 거기에 속았는지가 한꺼번에 드러납니다. 여기가 이 게임의 하이라이트입니다.',
+      },
+    ],
+    scoring: [
+      ['진짜 답을 찾으면', '+10점'],
+      ['내 거짓말에 속은 사람 1명당', '+5점'],
+      ['시간 안에 못 고르면', '0점'],
+    ],
+    tips: [
+      '너무 황당한 거짓말은 아무도 안 속고, 너무 밋밋하면 눈에 안 띕니다.',
+      '두 사람이 똑같은 거짓말을 쓰면 하나로 합쳐지고, 거기 속은 사람 점수는 둘 다 받습니다.',
+      '어쩌다 진짜 답을 그대로 써도 보기가 중복되지 않게 처리되니 걱정하지 않아도 됩니다.',
+      '맞히는 것보다 속이는 게 점수가 클 때가 많습니다 — 3명만 속이면 15점입니다.',
+    ],
+    demo() {
+      const rows = [
+        { t: '내가 쓴 거짓말', mine: true },
+        { t: '3' },
+        { t: '2' },
+      ];
+      return `<div class="qtext">문어의 심장은 ___개다.</div>
+        <div class="qopts">${rows.map(r =>
+          `<button type="button" class="qopt off${r.mine ? ' mine' : ''}">
+            <span>${escapeHtml(r.t)}</span>${r.mine ? '<span class="fbmine">내 거짓말</span>' : ''}
+          </button>`).join('')}</div>`;
+    },
+    demoCaption: '투표 화면. 내가 쓴 거짓말은 잠겨서 고를 수 없습니다.',
+  },
+
   mount(root) {
     root.dataset.fk = '';
     root.innerHTML = '';
@@ -36,12 +83,7 @@ export default {
   update(root, s, api) {
     const q = s.view && s.view.q;
 
-    if (s.phase === 'waiting' || s.phase === 'gameover') {
-      ensure(root, 'idle', `<div class="qhint">빈칸 문제에 <b>가짜 답</b>을 지어내 남을 속이고,<br>
-        섞여 나온 보기 중에서 <b>진짜 답</b>을 찾는 게임입니다.<br>
-        <span style="color:#64748b">진짜를 맞히면 10점 · 내 거짓말에 속은 사람 1명당 5점</span></div>`);
-      return;
-    }
+    // 대기 / 종료 화면은 app.js가 규칙 요약으로 그린다 (guide 하나에서 나온다)
     if (!q) { ensure(root, 'noq', `<div class="qhint">문제를 불러오는 중…</div>`); return; }
 
     // ---- 가짜 답 지어내기 ----

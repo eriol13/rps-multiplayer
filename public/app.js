@@ -171,6 +171,82 @@ function setGame(id) {
   if (g.mount) g.mount($('gamearea'));
 }
 
+// ---------- 게임 설명 ----------
+// 규칙은 게임 모듈의 guide 하나에만 있고, 아래 세 군데가 전부 거기서 나온다:
+// 게임 고르기 한 줄(desc) · 대기실 요약 · 이 모달.
+let guideTab = DEFAULT_GAME;
+
+function guideSectionsHtml(g) {
+  const gd = g.guide || {};
+  const meta = [
+    gd.players && `👥 ${gd.players}`,
+    gd.length && `⏱ ${gd.length}`,
+    gd.role && `🎭 ${gd.role}`,
+  ].filter(Boolean);
+
+  const flow = (gd.flow || []).map((s, i) => `
+    <div class="gdstep">
+      <span class="gdno">${i + 1}</span>
+      <div><b>${escapeHtml(s.title)}</b><p>${escapeHtml(s.body)}</p></div>
+    </div>`).join('');
+
+  const scoring = (gd.scoring || []).map(([what, pts]) =>
+    `<tr><td>${escapeHtml(what)}</td><td>${escapeHtml(pts)}</td></tr>`).join('');
+
+  const tips = (gd.tips || []).map(t => `<li>${escapeHtml(t)}</li>`).join('');
+
+  return `
+    <div class="gdhead">${g.emoji} ${escapeHtml(g.name)}</div>
+    <div class="gdsum">${escapeHtml(g.desc)}</div>
+    ${meta.length ? `<div class="gdmeta">${meta.map(m => `<span>${escapeHtml(m)}</span>`).join('')}</div>` : ''}
+    ${gd.demo ? `<div class="gdsec">화면은 이렇게 생겼습니다</div>
+      <div class="gddemo">${gd.demo()}</div>
+      ${gd.demoCaption ? `<div class="gdcap">${escapeHtml(gd.demoCaption)}</div>` : ''}` : ''}
+    ${flow ? `<div class="gdsec">진행 순서</div>${flow}` : ''}
+    ${scoring ? `<div class="gdsec">점수</div><table class="gdscore">${scoring}</table>` : ''}
+    ${tips ? `<div class="gdsec">알아두면 좋은 것</div><ul class="gdtips">${tips}</ul>` : ''}`;
+}
+
+function renderGuide() {
+  $('guideTabs').innerHTML = GAME_LIST.map(g =>
+    `<button type="button" data-g="${g.id}" class="${g.id === guideTab ? 'on' : ''}">${g.emoji} ${escapeHtml(g.name)}</button>`
+  ).join('');
+  $('guideTabs').querySelectorAll('button').forEach(b => {
+    b.onclick = () => { guideTab = b.dataset.g; renderGuide(); $('guideBody').scrollTop = 0; };
+  });
+  $('guideBody').innerHTML = guideSectionsHtml(GAMES[guideTab] || GAMES[DEFAULT_GAME]);
+}
+
+function openGuide(gameId) {
+  guideTab = gameId || (currentGame ? currentGame.id : pickedGame);
+  renderGuide();
+  $('guideModal').classList.remove('hidden');
+}
+$('guideOpen').onclick = () => openGuide();
+$('guideClose').onclick = () => $('guideModal').classList.add('hidden');
+$('guideModal').onclick = (e) => { if (e.target === $('guideModal')) $('guideModal').classList.add('hidden'); };
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') $('guideModal').classList.add('hidden');
+});
+
+// 대기실에서 보여줄 짧은 요약 (같은 guide에서 나온다)
+function renderIdleGuide(root, g) {
+  // dataset만 보면 안 된다 — 게임 화면이 안을 갈아엎어도 이 표시는 남아 있기 때문에,
+  // 실제로 요약이 그려져 있는지까지 확인해야 매치가 끝났을 때 다시 그려진다.
+  if (root.dataset.idle === g.id && root.querySelector('[data-more]')) return;
+  for (const k of Object.keys(root.dataset)) delete root.dataset[k];   // 게임 모듈의 렌더 캐시 무효화
+  root.dataset.idle = g.id;
+  const gd = g.guide || {};
+  const steps = (gd.flow || []).map((s, i) => `${i + 1}. ${escapeHtml(s.title)}`).join('<br>');
+  root.innerHTML = `
+    <div class="qhint">
+      <b>${g.emoji} ${escapeHtml(g.name)}</b><br>${escapeHtml(g.desc)}
+      ${steps ? `<div style="margin-top:10px;color:#cbd5e1;line-height:1.8">${steps}</div>` : ''}
+      <button class="btn-guide" style="margin:12px auto 0" data-more>자세한 설명 보기 →</button>
+    </div>`;
+  root.querySelector('[data-more]').onclick = () => openGuide(g.id);
+}
+
 // ---------- 이모지 리액션 ----------
 const REACTIONS = ['👍', '😂', '😮', '😭', '🔥', '🤔', '👏', '💀'];
 $('reactrow').innerHTML = REACTIONS.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('');
@@ -302,8 +378,10 @@ function render(s) {
 
   if (me) myReady = me.ready;
 
-  // 게임별 UI 갱신
-  if (currentGame.update) {
+  // 게임 영역 — 대기/종료 중에는 규칙 요약을, 진행 중에는 게임 화면을 그린다
+  if (s.phase === 'waiting' || s.phase === 'gameover') {
+    renderIdleGuide($('gamearea'), currentGame);
+  } else if (currentGame.update) {
     currentGame.update($('gamearea'), s, {
       myId, me, canSubmit, mySub, iSpectator,
       submit: (value, extra) => submit(value, extra),

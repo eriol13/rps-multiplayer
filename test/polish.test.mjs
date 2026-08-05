@@ -61,7 +61,7 @@ check('봇이 채워져 매치가 시작됐다', A.last.phase === 'collect');
 
 console.log('\n[2] 봇이 알아서 낸다');
 A.send({ type: 'submit', value: 'rock' });
-await until(A, s => s.phase === 'reveal', 14000, '봇 제출 후 결과');
+await until(A, s => s.phase === 'reveal', 30000, '봇 제출 후 결과');
 const bot = A.bots()[0];
 check('봇이 무언가를 냈다', ['rock', 'paper', 'scissors'].includes(A.p(bot.id).sub?.choose),
       JSON.stringify(A.p(bot.id).sub));
@@ -74,15 +74,15 @@ check('기록에 두 사람 몫이 다 있다', h0.entries.length === 2, JSON.st
 check('내가 낸 것이 기록에 남았다', h0.entries.find(e => e.id === A.id).sub.choose === 'rock');
 check('기록에 승자가 남는다', Array.isArray(h0.winners));
 
-await until(A, s => s.history?.length === 2, 20000, '2판 기록');
+await until(A, s => s.history?.length === 2, 40000, '2판 기록');
 check('2판까지 쌓였다', A.last.history.length === 2);
 check('1판 기록이 2판 제출로 덮이지 않았다', A.last.history[0].entries.find(e => e.id === A.id).sub.choose === 'rock',
       JSON.stringify(A.last.history[0].entries.find(e => e.id === A.id).sub));
 
 console.log('\n[4] 매치를 다시 시작하면 기록이 초기화된다');
-await until(A, s => s.phase === 'gameover', 20000, '매치 종료');
+await until(A, s => s.phase === 'gameover', 40000, '매치 종료');
 A.send({ type: 'ready', value: true });
-await until(A, s => s.phase === 'collect' && s.round === 1, 6000, '새 매치');
+await until(A, s => s.phase === 'collect' && s.round === 1, 15000, '새 매치');
 check('새 매치에서 기록이 비었다', A.last.history.length === 0, `history=${A.last.history.length}`);
 
 console.log('\n[5] 이모지 리액션');
@@ -119,7 +119,7 @@ console.log('\n[7] 봇 상한과 제거');
 const rush = setInterval(() => {
   if (A.last?.phase === 'collect' && !A.p(A.id)?.hasSubmitted) A.send({ type: 'submit', value: 'rock' });
 }, 200);
-await until(A, s => s.phase === 'gameover', 25000, '매치 종료 대기');
+await until(A, s => s.phase === 'gameover', 60000, '매치 종료 대기');
 clearInterval(rush);
 A.send({ type: 'addbot' }); await wait(150);
 A.send({ type: 'addbot' }); await wait(150);

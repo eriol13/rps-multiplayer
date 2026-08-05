@@ -18,6 +18,48 @@ export default {
   roundsLabel: '몇 문제',
   unit: '문제',
 
+  guide: {
+    players: '3명 이상',
+    length: '한 문제 30초쯤',
+    flow: [
+      {
+        title: '"누가 제일 ~할 것 같아?" 질문이 나온다',
+        body: '"지각을 제일 자주 할 것 같은 사람은?" 처럼 서로를 두고 묻는 질문입니다. 서로 아는 사이일수록 재밌습니다.',
+      },
+      {
+        title: '전원이 한 명을 지목한다 (20초)',
+        body: '참가자 목록에서 한 명을 고릅니다. 자기 자신도 고를 수 있습니다. 누가 누구를 골랐는지는 아직 보이지 않습니다.',
+      },
+      {
+        title: '득표 공개',
+        body: '누가 몇 표를 받았는지 막대로 나오고, 각각을 누가 지목했는지도 함께 공개됩니다.',
+      },
+    ],
+    scoring: [
+      ['가장 많이 뽑힌 사람을 맞히면', '+10점'],
+      ['내가 가장 많이 뽑혔다면', '+5점'],
+      ['전원이 서로 다른 사람을 찍으면', '아무도 점수 없음'],
+    ],
+    tips: [
+      '내 생각이 아니라 "다들 누구를 찍을까"를 맞히는 게임입니다.',
+      '뽑힌 사람도 점수를 받습니다. 놀림만 당하고 끝나지 않게 해뒀습니다.',
+      '표가 완전히 갈리면 그 판은 무득점입니다 — 의견이 갈릴수록 이득인 게임이 되지 않도록.',
+    ],
+    demo() {
+      const rows = [
+        { n: '민수', v: 3, w: true, who: '지현, 태호, 서연' },
+        { n: '지현', v: 1, w: false, who: '민수' },
+      ];
+      return rows.map(r => `
+        <div class="mlrow ${r.w ? 'win' : ''}">
+          <div class="mlhead"><span>${r.w ? '👑 ' : ''}${r.n}</span><span class="mlcount">${r.v}표</span></div>
+          <div class="mlbar"><div style="width:${r.v / 4 * 100}%"></div></div>
+          <div class="mlvoters">지목한 사람: ${r.who}</div>
+        </div>`).join('');
+    },
+    demoCaption: '결과 화면. 민수를 찍은 세 명이 +10점, 민수 본인은 +5점입니다.',
+  },
+
   mount(root) {
     root.dataset.mk = '';
     root.innerHTML = '';
@@ -34,12 +76,7 @@ export default {
   update(root, s, api) {
     const q = s.view && s.view.q;
 
-    if (s.phase === 'waiting' || s.phase === 'gameover') {
-      ensure(root, 'idle', `<div class="qhint">질문이 나오면 <b>한 명을 지목</b>합니다(자기 자신도 가능).<br>
-        <b>가장 많이 뽑힌 사람</b>을 맞힌 사람이 10점 · 뽑힌 본인도 5점.<br>
-        <span style="color:#64748b">전원이 서로 다른 사람을 찍으면 그 판은 점수가 없습니다</span></div>`);
-      return;
-    }
+    // 대기 / 종료 화면은 app.js가 규칙 요약으로 그린다 (guide 하나에서 나온다)
     if (!q) { ensure(root, 'noq', `<div class="qhint">질문을 불러오는 중…</div>`); return; }
 
     const players = s.players.filter(p => p.playing && p.connected);

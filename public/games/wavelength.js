@@ -34,6 +34,51 @@ export default {
   roundsLabel: '몇 판',
   unit: '판',
 
+  guide: {
+    players: '3명 이상',
+    role: '힌트 담당이 매 판 돌아감',
+    flow: [
+      {
+        title: "'차갑다 ↔ 뜨겁다' 같은 축이 나온다",
+        body: '축 위 어딘가에 숨겨진 목표 지점이 정해집니다. 이 지점은 그 판의 힌트 담당 한 명에게만 보입니다.',
+      },
+      {
+        title: '힌트 담당이 단어 하나를 던진다 (45초)',
+        body: '목표 지점을 가리키는 힌트를 씁니다. 예를 들어 목표가 오른쪽 끝에 가까우면 "용암", 가운데쯤이면 "미지근한 커피" 같은 식입니다. 숫자나 위치를 직접 말하면 게임이 성립하지 않습니다.',
+      },
+      {
+        title: '나머지가 슬라이더로 위치를 맞힌다 (30초)',
+        body: '힌트만 보고 "이쯤이겠다" 싶은 곳으로 슬라이더를 옮겨 제출합니다. 각자 따로 맞히기 때문에 남이 어디를 골랐는지는 보이지 않습니다.',
+      },
+      {
+        title: '목표 공개 — 가까울수록 고득점',
+        body: '목표 지점과 각자의 위치가 막대 위에 함께 표시됩니다. 정확히 맞히지 않아도 근처면 점수를 받습니다.',
+      },
+    ],
+    scoring: [
+      ['목표에서 4 이내 (정중앙)', '+10점'],
+      ['10 이내', '+7점'],
+      ['18 이내', '+5점'],
+      ['28 이내', '+3점'],
+      ['그보다 멀면', '0점'],
+      ['힌트 담당', '맞힌 사람들의 평균 점수'],
+    ],
+    tips: [
+      '힌트 담당도 점수를 받습니다 — 다들 잘 맞힐수록 내 점수도 올라갑니다. 어렵게 낼 이유가 없습니다.',
+      '힌트 담당은 매 판 돌아가므로 모두가 한 번씩 맡게 됩니다.',
+      '목표는 양 끝(0·100)에는 오지 않습니다. 끝이면 힌트를 만들 수 없기 때문입니다.',
+    ],
+    demo() {
+      const target = 68;
+      return barHtml(['차갑다', '뜨겁다'], target, [
+        { within: 4 }, { within: 10 }, { within: 18 }, { within: 28 },
+      ]).replace('<div class="wvmarks" data-marks></div>',
+        '<div class="wvmarks"><div class="wvmark" style="left:60%"></div><div class="wvmark" style="left:30%"></div></div>')
+        + '<div class="wvclue" style="margin-bottom:0">💡 갓 내린 커피</div>';
+    },
+    demoCaption: '노란 선이 목표, 초록 띠가 점수 구간, 흰 선이 각자 찍은 곳입니다. 목표와 띠는 힌트 담당에게만 보입니다.',
+  },
+
   mount(root) {
     root.dataset.wk = '';
     root.innerHTML = '';
@@ -57,12 +102,7 @@ export default {
     const v = s.view || {};
     const mine = s.pickerId === api.myId;
 
-    if (s.phase === 'waiting' || s.phase === 'gameover') {
-      ensure(root, 'idle', `<div class="qhint">'차갑다 ↔ 뜨겁다' 같은 축 위에 <b>숨겨진 지점</b>이 정해집니다.<br>
-        힌트 담당만 그 지점을 보고 <b>힌트 하나</b>를 던지고, 나머지가 슬라이더로 맞힙니다.<br>
-        <span style="color:#64748b">가까울수록 고득점 · 힌트 담당은 매 판 돌아가고, 다들 잘 맞힐수록 점수를 받습니다</span></div>`);
-      return;
-    }
+    // 대기 / 종료 화면은 app.js가 규칙 요약으로 그린다 (guide 하나에서 나온다)
     if (!v.spectrum) { ensure(root, 'nospec', `<div class="qhint">준비 중…</div>`); return; }
 
     // ---- 힌트 던지기 ----

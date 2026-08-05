@@ -10,6 +10,7 @@
 <div class="card">
   <h1 id="title">🎮 미니게임</h1>
   <div class="sub" id="subtitle">여러 명이 동시에 · 실시간 WebSocket</div>
+  <button class="btn-guide" id="guideOpen">❔ 게임 설명 보기</button>
 
   <!-- 재접속 중 -->
   <div id="reconnecting" class="hidden">
@@ -107,6 +108,18 @@
     <button class="btn-primary" id="playAgainBtn">돌아가기</button>
     <button class="btn-share" id="shareBtn">📤 결과 이미지로 저장·공유</button>
     <button class="btn-link" id="overlayLeaveBtn" style="width:80%">방 나가기</button>
+  </div>
+</div>
+
+<!-- 게임 설명 모달 -->
+<div class="modal hidden" id="guideModal">
+  <div class="modalcard">
+    <div class="modalhead">
+      <b>🎮 게임 설명</b>
+      <button class="modalx" id="guideClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="tabbar" id="guideTabs"></div>
+    <div class="modalbody" id="guideBody"></div>
   </div>
 </div>
 
