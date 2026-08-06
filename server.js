@@ -51,6 +51,7 @@ const server = http.createServer((req, res) => {
 const REVEAL_SECONDS = 5;    // 결과 표시 시간
 const GRACE_MS = 30000;      // 연결이 끊긴 뒤 자리(점수)를 지켜주는 시간
 const ROOM_TTL_MS = 60000;   // 아무도 없는 방을 남겨두는 시간
+const PING_MS = 30000;       // 연결이 살아있는지 확인하는 주기 (무응답이면 다음 차례에 끊는다)
 const MAX_BOTS = 3;          // 방당 봇 수 상한
 const REACT_COOLDOWN_MS = 500;
 const REACTIONS = ['👍', '😂', '😮', '😭', '🔥', '🤔', '👏', '💀'];
@@ -477,9 +478,25 @@ function removeBot(room) {
 const wss = new WebSocketServer({ server });
 let nextId = 1;
 
+// 연결이 아직 살아있는지 확인한다.
+// 탭을 닫으면 브라우저가 알려주지만, 노트북 덮개를 닫거나 와이파이가 끊기면
+// TCP 연결만 남고 아무 신호도 오지 않는다. 그러면 close 이벤트가 영영 안 떠서
+// 서버는 그 사람이 계속 접속 중이라고 믿고, 아무도 없는 방이 목록에 남는다.
+// 그래서 주기적으로 찔러 보고, 답이 없는 연결은 끊는다.
+// (브라우저는 ping에 자동으로 답하므로 화면 쪽은 손댈 것이 없다.)
+setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) { ws.terminate(); continue; }   // 지난번 ping에 무응답
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, PING_MS);
+
 wss.on('connection', (ws) => {
   let player = null;
   let room = null;
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
 
   ws.on('message', (raw) => {
     let msg;
