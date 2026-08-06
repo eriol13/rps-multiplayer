@@ -121,23 +121,84 @@ $('giveUpReconnect').onclick = () => {
 // ---------- 공개 방 목록 ----------
 const PHASE_LABEL = { waiting: '대기 중', collect: '진행 중', reveal: '진행 중', gameover: '끝나고 대기 중' };
 
+let lobbyRooms = [];        // 마지막으로 받아온 목록
+let roomsFilter = 'all';    // 모달에서 고른 게임 (all = 전체)
+
 async function loadLobby() {
-  const box = $('lobbyList');
+  const box = $('lobbySummary');
   box.innerHTML = '<div class="lobbyempty">불러오는 중…</div>';
-  let rooms;
   try {
     const res = await fetch('/api/rooms', { cache: 'no-store' });
-    rooms = await res.json();
+    const list = await res.json();
+    lobbyRooms = Array.isArray(list) ? list : [];
   } catch {
+    lobbyRooms = [];
     box.innerHTML = '<div class="lobbyempty">방 목록을 불러오지 못했습니다.</div>';
+    renderRoomsModal();
     return;
   }
-  if (!Array.isArray(rooms) || !rooms.length) {
+  renderLobbySummary();
+  renderRoomsModal();
+}
+$('lobbyRefresh').onclick = loadLobby;
+$('roomsRefresh').onclick = loadLobby;
+
+// 방이 하나라도 있는 게임만, 게임 고르는 화면과 같은 순서로
+function gameCounts() {
+  const n = new Map();
+  for (const r of lobbyRooms) n.set(r.game, (n.get(r.game) || 0) + 1);
+  return GAME_LIST.filter(g => n.has(g.id)).map(g => ({ g, n: n.get(g.id) }));
+}
+
+// 첫 화면에는 개수만 둔다. 방이 많아져도 카드 높이가 늘지 않고,
+// 이 칩이 그대로 모달의 필터가 된다.
+function renderLobbySummary() {
+  const box = $('lobbySummary');
+  $('lobbyCount').textContent = lobbyRooms.length ? `지금 열린 방 ${lobbyRooms.length}` : '지금 열린 방';
+  if (!lobbyRooms.length) {
     box.innerHTML = `<div class="lobbyempty">지금 열린 공개 방이 없어요.<br>
       <b style="color:#a5b4fc">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
     return;
   }
-  box.innerHTML = rooms.map(r => {
+  box.innerHTML = `<div class="roomchips">
+    <button type="button" class="roomchip" data-game="all">전체 <b>${lobbyRooms.length}</b></button>
+    ${gameCounts().map(({ g, n }) => `<button type="button" class="roomchip" data-game="${g.id}">
+      ${g.emoji} ${escapeHtml(g.name)} <b>${n}</b></button>`).join('')}
+  </div>`;
+  box.querySelectorAll('.roomchip').forEach(b => { b.onclick = () => openRooms(b.dataset.game); });
+}
+
+function openRooms(game) {
+  roomsFilter = game || 'all';
+  $('roomsModal').classList.remove('hidden');
+  renderRoomsModal();
+}
+$('roomsClose').onclick = () => $('roomsModal').classList.add('hidden');
+$('roomsModal').onclick = (e) => { if (e.target === $('roomsModal')) $('roomsModal').classList.add('hidden'); };
+
+function renderRoomsModal() {
+  if ($('roomsModal').classList.contains('hidden')) return;
+  const counts = gameCounts();
+  // 새로고침으로 고른 게임의 방이 다 사라졌으면 전체로 되돌린다
+  if (roomsFilter !== 'all' && !counts.some(c => c.g.id === roomsFilter)) roomsFilter = 'all';
+
+  const tabs = [{ id: 'all', label: `전체 ${lobbyRooms.length}` }]
+    .concat(counts.map(({ g, n }) => ({ id: g.id, label: `${g.emoji} ${g.name} ${n}` })));
+  $('roomsTabs').innerHTML = tabs.map(t =>
+    `<button type="button" data-game="${t.id}" class="${t.id === roomsFilter ? 'on' : ''}">${escapeHtml(t.label)}</button>`
+  ).join('');
+  $('roomsTabs').querySelectorAll('button').forEach(b => {
+    b.onclick = () => { roomsFilter = b.dataset.game; renderRoomsModal(); };
+  });
+
+  const box = $('roomsList');
+  const shown = roomsFilter === 'all' ? lobbyRooms : lobbyRooms.filter(r => r.game === roomsFilter);
+  if (!shown.length) {
+    box.innerHTML = `<div class="lobbyempty">지금 열린 공개 방이 없어요.<br>
+      <b style="color:#a5b4fc">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
+    return;
+  }
+  box.innerHTML = shown.map(r => {
     const g = GAMES[r.game] || {};
     const bots = r.players - r.humans;
     return `<button type="button" class="roomitem" data-room="${escapeHtml(r.code)}">
@@ -148,10 +209,12 @@ async function loadLobby() {
     </button>`;
   }).join('');
   box.querySelectorAll('.roomitem').forEach(b => {
-    b.onclick = () => connect($('name').value.trim() || '익명', b.dataset.room, null, 'join');
+    b.onclick = () => {
+      $('roomsModal').classList.add('hidden');
+      connect($('name').value.trim() || '익명', b.dataset.room, null, 'join');
+    };
   });
 }
-$('lobbyRefresh').onclick = loadLobby;
 
 // 모드 전환 — 목록은 첫 화면에서만 보인다
 const showLobby = (on) => $('lobby').classList.toggle('hidden', !on);

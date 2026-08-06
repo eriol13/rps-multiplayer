@@ -69,6 +69,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .modalbody { padding: 18px; overflow-y: auto; }
 .modalfoot { padding: 14px 18px; border-top: 1px solid #334155; }
 .modalfoot:empty { display: none; }
+.modalfoot .btn-link { margin: 0; }
 
 /* 퀴즈 편집기 */
 .ednotice {
@@ -142,6 +143,14 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   background: transparent; border: 1px solid #334155; color: #94a3b8;
   font-size: 12px; padding: 5px 10px; font-weight: 500;
 }
+/* 첫 화면 — 게임별 개수 칩. 이걸 누르면 그 게임으로 걸러진 목록이 열린다 */
+.roomchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.roomchip {
+  flex: 0 1 auto; background: #0f172a; border: 1px solid #334155; color: #cbd5e1;
+  font-size: 13px; font-weight: 600; padding: 8px 11px;
+}
+.roomchip:hover { border-color: #6366f1; color: #e2e8f0; }
+.roomchip b { color: #a5b4fc; margin-left: 2px; }
 .roomitem {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   background: #0f172a; border: 1px solid #334155; color: #e2e8f0;

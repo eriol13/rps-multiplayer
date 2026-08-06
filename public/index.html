@@ -29,13 +29,13 @@
       <button class="btn-join" id="showJoin">→ 입장하기</button>
     </div>
 
-    <!-- 지금 열린 공개 방 -->
+    <!-- 지금 열린 공개 방 — 첫 화면엔 게임별 개수만, 목록은 모달에서 -->
     <div id="lobby">
       <div class="lobbyhead">
-        <span>지금 열린 방</span>
+        <span id="lobbyCount">지금 열린 방</span>
         <button id="lobbyRefresh">↻ 새로고침</button>
       </div>
-      <div id="lobbyList"></div>
+      <div id="lobbySummary"></div>
     </div>
 
     <!-- 방 만들기 패널 -->
@@ -138,6 +138,19 @@
     </div>
     <div class="tabbar" id="guideTabs"></div>
     <div class="modalbody" id="guideBody"></div>
+  </div>
+</div>
+
+<!-- 열린 방 목록 -->
+<div class="modal hidden" id="roomsModal">
+  <div class="modalcard">
+    <div class="modalhead">
+      <b>🚪 지금 열린 방</b>
+      <button class="modalx" id="roomsClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="tabbar" id="roomsTabs"></div>
+    <div class="modalbody" id="roomsList"></div>
+    <div class="modalfoot"><button class="btn-link" id="roomsRefresh">↻ 새로고침</button></div>
   </div>
 </div>
 
