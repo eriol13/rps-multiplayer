@@ -12,6 +12,7 @@ const SUITES = [
   'lobby.test.mjs',
   'quiz.test.mjs',
   'quizdeck.test.mjs',
+  'quizrotate.test.mjs',
   'fibbage.test.mjs',
   'wavelength.test.mjs',
   'mostlikely.test.mjs',

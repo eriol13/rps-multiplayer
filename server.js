@@ -307,6 +307,12 @@ function maybeAdvance(room) {
 function advanceStep(room) {
   if (room.phase !== 'collect') return;
   clearTimeout(room.timer);
+  // 단계가 끝날 때 게임이 한 번 끼어들 기회. 'restart'를 돌려주면 같은 단계를 처음부터 다시 돌린다
+  // (퀴즈 로테이션: 출제자가 넘기거나 시간이 다 되면 다음 사람으로 바꾸고 제한시간을 되돌린다)
+  if (room.game.stepEnd && room.game.stepEnd(room.g, room, room.step) === 'restart') {
+    startStep(room);
+    return;
+  }
   room.stepIndex += 1;
   if (room.stepIndex < room.game.steps.length) startStep(room);
   else reveal(room);

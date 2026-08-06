@@ -76,8 +76,11 @@ function openEditor(after) {
     },
   });
 }
+function sendConfig(obj) {
+  if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'config', ...obj }));
+}
 function sendDeck() {
-  if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'config', deck: myDeck }));
+  sendConfig({ deck: myDeck });
 }
 $('editorOpenCreate').onclick = () => openEditor();
 $('editorOpenRoom').onclick = () => openEditor(() => sendDeck());
@@ -548,6 +551,17 @@ function render(s) {
   const waiting = s.phase === 'waiting' || s.phase === 'gameover';
   const iHost = s.hostId === myId;
   const deckSize = (s.configInfo && s.configInfo.deckSize) || 0;
+
+  // 게임이 직접 그리는 설정 (예: 퀴즈의 출제자 모드) — 방장만, 대기 중에만
+  const cfgEl = $('gameconfig');
+  if (currentGame.configUI && waiting && iHost) {
+    cfgEl.classList.remove('hidden');
+    currentGame.configUI(cfgEl, s, { config: (obj) => sendConfig(obj) });
+  } else {
+    cfgEl.classList.add('hidden');
+    cfgEl.dataset.ck = '';
+  }
+
   const edBtn = $('editorOpenRoom');
   if (s.configurable && currentGame.editor && waiting && iHost) {
     edBtn.classList.remove('hidden');

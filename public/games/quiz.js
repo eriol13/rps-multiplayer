@@ -38,11 +38,11 @@ export default {
 
   guide: {
     players: '2명 이상',
-    role: '방장이 계속 출제',
+    role: '방장이 계속 출제 (돌아가며로 바꿀 수 있음)',
     flow: [
       {
-        title: '방장이 그 자리에서 문제를 만든다',
-        body: '미리 문제집을 준비할 필요가 없습니다. 게임이 시작되면 방장 화면에 입력칸이 뜨고, 문제 · 보기 2~4개 · 정답 · 제한시간(5~60초)을 직접 정해서 냅니다. 이 단계에는 제한시간이 없으니 천천히 써도 됩니다.',
+        title: '출제자가 그 자리에서 문제를 만든다',
+        body: '미리 문제집을 준비할 필요가 없습니다. 게임이 시작되면 출제자 화면에 입력칸이 뜨고, 문제 · 보기 2~4개 · 정답 · 제한시간(5~60초)을 직접 정해서 냅니다. 출제자는 기본적으로 방장이며, 대기실에서 "돌아가며"로 바꾸면 매 라운드 한 사람씩 맡습니다.',
       },
       {
         title: '나머지가 제한시간 안에 답을 고른다',
@@ -57,11 +57,13 @@ export default {
       ['정답을 맞히면', '+10점'],
       ['남은 시간에 비례해 추가', '최대 +10점'],
       ['오답 · 시간 초과', '0점'],
-      ['출제자(방장)', '점수 없음'],
+      ['출제자', '점수 없음'],
     ],
     tips: [
       '정답은 출제자 화면과 결과 화면에만 내려갑니다. 개발자도구로 미리 볼 수 없습니다.',
-      '출제자는 점수를 받지 않습니다 — 진행을 맡는 자리라고 보시면 됩니다.',
+      '출제자는 그 문제에서 점수를 받지 않습니다. 방장 고정으로 두면 방장은 0점으로 끝나니, 다 같이 겨루려면 대기실에서 "돌아가며"를 고르세요.',
+      '돌아가며 모드에서는 출제 시간이 90초입니다. 낼 게 없으면 버튼으로 바로 다음 사람에게 넘길 수 있고, 넘기면 90초도 처음부터 다시 셉니다.',
+      '한 바퀴를 다 돌도록 아무도 문제를 내지 않으면 그 라운드는 넘어갑니다.',
       '방장이 나가면 남은 사람이 다음 문제부터 출제를 이어받습니다.',
     ],
     demo() {
@@ -83,6 +85,28 @@ export default {
     root.innerHTML = '';
   },
 
+  // 대기실 설정 — 출제자를 누가 맡을지 (방장 화면에만 뜬다)
+  configUI(root, s, api) {
+    const mode = (s.configInfo && s.configInfo.picker) || 'host';
+    const secs = (s.configInfo && s.configInfo.askSeconds) || 90;
+    if (root.dataset.ck === mode) return;
+    root.dataset.ck = mode;
+    root.innerHTML = `
+      <div class="cfgrow">
+        <span class="cfglabel">출제자</span>
+        <div class="cfgtabs">
+          <button type="button" class="${mode === 'host' ? 'on' : ''}" data-picker="host">방장이 계속</button>
+          <button type="button" class="${mode === 'rotate' ? 'on' : ''}" data-picker="rotate">돌아가며</button>
+        </div>
+      </div>
+      <div class="cfghint">${mode === 'rotate'
+        ? `매 라운드 한 사람씩 출제를 맡습니다. 낼 것이 없으면 ${secs}초 안에 다음 사람에게 넘길 수 있어요.`
+        : '방장이 모든 문제를 냅니다. 출제자는 점수를 받지 않으니 방장은 0점으로 끝납니다.'}</div>`;
+    root.querySelectorAll('[data-picker]').forEach(b => {
+      b.onclick = () => api.config({ picker: b.dataset.picker });
+    });
+  },
+
   // 상태 문구를 게임이 직접 정한다
   status(s, { myId, iSpectator }) {
     const iAsk = s.pickerId === myId;
@@ -90,7 +114,9 @@ export default {
     if (s.phase === 'gameover') return null;
     if (iSpectator) return '👀 관전 중 · 다음 판부터 참여합니다';
     if (s.phase === 'collect' && s.step === 'ask') {
-      return iAsk ? `🖊 ${s.round}번 문제를 내주세요` : '🖊 출제자가 문제를 만드는 중…';
+      if (iAsk) return `🖊 ${s.round}번 문제를 내주세요`;
+      const who = s.players.find(p => p.id === s.pickerId);
+      return who ? `🖊 ${who.name} 님이 문제를 만드는 중…` : '🖊 출제자가 문제를 만드는 중…';
     }
     if (s.phase === 'collect' && s.step === 'answer') {
       return iAsk ? `👀 ${s.round}번 문제 — 답을 기다리는 중` : `❓ ${s.round} / ${s.totalRounds}번 문제 — 정답을 고르세요!`;
@@ -107,12 +133,16 @@ export default {
 
     // ---- 출제 단계 ----
     if (s.phase === 'collect' && s.step === 'ask') {
+      // 돌아가며 모드에서는 출제자가 라운드 도중에도 바뀐다 — 이름을 키에 넣어 그때 다시 그린다
       if (!iAsk) {
-        ensure(root, 'waitask', `<div class="qhint">🖊 출제자가 문제를 만들고 있어요…<br>잠시만요</div>`);
+        const who = api.nameOf(s.pickerId);
+        ensure(root, `waitask-${s.pickerId}`,
+          `<div class="qhint">🖊 ${escapeHtml(who)} 님이 문제를 만들고 있어요…<br>잠시만요</div>`);
         return;
       }
-      // 라운드를 키에 넣어야 다음 문제에서 이전에 쓴 글자가 남지 않는다
-      const built = ensure(root, `askform-${s.round}${s.suddenDeath ? '-sd' : ''}`, `
+      const rotate = s.configInfo && s.configInfo.picker === 'rotate';
+      // 라운드+출제자를 키에 넣어야 다음 문제에서 이전에 쓴 글자가 남지 않는다
+      const built = ensure(root, `askform-${s.round}-${s.pickerId}${s.suddenDeath ? '-sd' : ''}`, `
         <div class="qform">
           <label>문제</label>
           <input id="qText" placeholder="예) 대한민국의 수도는?" maxlength="200" />
@@ -126,9 +156,11 @@ export default {
           <input id="qSecs" type="number" min="5" max="60" value="20" />
           <div id="qErr" class="qerr hidden"></div>
           <button class="btn-primary" id="qSend">이 문제 내기</button>
+          ${rotate ? `<button class="btn-guide qpass" id="qPass">낼 게 없어요 — 다음 사람에게 넘기기</button>` : ''}
         </div>`);
 
       if (built) {
+        if (rotate) root.querySelector('#qPass').onclick = () => api.submit(null, { pass: true });
         let answer = 0;
         const marks = root.querySelectorAll('.qmark');
         const paint = () => marks.forEach((m, i) => m.classList.toggle('on', i === answer));
@@ -195,6 +227,7 @@ export default {
 
   // 지난 판 기록의 한 칸 — 그 문제를 맞혔는지는 roundScore로 알 수 있다
   historyCell(e) {
+    if (e.sub && e.sub.ask === 'pass') return '⏭';
     if (e.sub && e.sub.ask) return '🖊';
     if (!e.sub || e.sub.answer == null) return '⏱';
     return e.roundScore > 0 ? '⭕' : '❌';

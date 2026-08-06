@@ -102,6 +102,18 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; text-align: center;
 }
 
+/* 대기실에서 게임이 직접 그리는 설정 (퀴즈의 출제자 모드 등) */
+.cfgrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.cfglabel { flex: 0 0 auto; font-size: 13px; color: #94a3b8; }
+.cfgtabs { display: flex; flex: 1; gap: 6px; }
+.cfgtabs button {
+  flex: 1 1 0; min-width: 0; background: #0f172a; border: 1px solid #334155;
+  color: #94a3b8; font-size: 13px; padding: 8px 10px;
+}
+.cfgtabs button.on { background: #312e81; border-color: #6366f1; color: #e2e8f0; }
+/* 아래 .btn-guide 가 margin-top:-10px 로 끌려 올라오므로 그만큼 여유를 둔다 */
+.cfghint { margin: 6px 0 18px; font-size: 12px; color: #64748b; line-height: 1.5; }
+
 .gdhead { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
 .gdsum { color: #94a3b8; font-size: 14px; margin-bottom: 14px; }
 .gdmeta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -238,6 +250,8 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 }
 .qmark.on { border-color: #22c55e; background: #052e16; }
 .qerr { margin-bottom: 8px; padding: 8px 10px; border-radius: 8px; background: #7f1d1d; color: #fecaca; font-size: 13px; }
+/* '넘기기'는 .btn-guide 를 쓰되 위로 끌어올리는 음수 margin 은 쓰지 않는다 */
+.qpass { width: 100%; margin: 10px 0 0; }
 
 .qtext {
   font-size: 19px; font-weight: 700; text-align: center; line-height: 1.5;
