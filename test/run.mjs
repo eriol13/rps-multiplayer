@@ -17,6 +17,7 @@ const SUITES = [
   'fibbage.test.mjs',
   'wavelength.test.mjs',
   'mostlikely.test.mjs',
+  'samemind.test.mjs',
   'polish.test.mjs',
 ];
 
