@@ -1,4 +1,8 @@
 node_modules/
 npm-debug.log
-.env
 .DS_Store
+
+# 비밀이 담기는 파일. `.env` 만 막으면 `무엇무엇.env` 는 그대로 커밋된다.
+.env
+.env.*
+*.env
