@@ -1,0 +1,12 @@
+name = "minigame-keepalive"
+main = "src/index.js"
+compatibility_date = "2026-08-07"
+
+# 두드릴 주소. Render 대시보드에 나오는 배포 주소를 그대로 넣는다.
+[vars]
+SITE_URL = "https://여기에-배포주소.onrender.com"
+
+# 10분마다. 15분 창에 5분 여유를 남긴다 — 14분으로 잡으면 한 번만 밀려도 잠든다.
+# 정각을 피해 분을 어긋나게 뒀다.
+[triggers]
+crons = ["2,12,22,32,42,52 * * * *"]
