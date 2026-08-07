@@ -21,10 +21,22 @@ Cloudflare에 올라간다. 게임 코드와는 아무 관계가 없다.
 
 ```bash
 cd keepalive
-# 1) wrangler.toml 의 SITE_URL 을 실제 배포 주소로 바꾼다
-npx wrangler login      # 처음 한 번만
 npx wrangler deploy
 ```
+
+인증은 **API 토큰**으로 한다. `npx wrangler login`(OAuth)은 Windows/Node 24에서
+libuv 어서션으로 크래시하고, 요구하는 권한도 workers를 넘어 pages·d1·zone·
+email_sending까지 계정 전반이라 넓다.
+
+Cloudflare 대시보드 → My Profile → API Tokens → **"Edit Cloudflare Workers"**
+템플릿으로 토큰을 만들고, 환경변수로 둔다:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("CLOUDFLARE_API_TOKEN","<토큰>","User")
+```
+
+`keepalive/.env` 에 `CLOUDFLARE_API_TOKEN=<토큰>` 으로 둬도 wrangler가 읽는다
+(`.env` 는 `.gitignore` 에 있다). **토큰은 커밋·문서에 남기지 말 것.**
 
 배포되면 출력에 `https://minigame-keepalive.<계정>.workers.dev` 주소가 나온다.
 **그 주소를 브라우저로 열면 지금 바로 한 번 두드린다** — 10분을 기다리지 않고
