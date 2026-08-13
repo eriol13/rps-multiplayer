@@ -9,6 +9,14 @@ function ensure(root, key, html) {
   return true;
 }
 
+// 닉네임은 사람마다 받침이 달라서 조사를 고정하면 "밥를 지목했어요"가 된다.
+// 한글이면 종성 유무로 을/를을 고르고, 그 밖(영문·숫자·이모지)은 '를'로 둔다.
+function objectParticle(name) {
+  const code = String(name).charCodeAt(String(name).length - 1);
+  const hangul = code >= 0xac00 && code <= 0xd7a3;
+  return hangul && (code - 0xac00) % 28 !== 0 ? '을' : '를';
+}
+
 // 카테고리 + (제시어 | 라이어 통보). 라이어에게는 제시어가 아예 내려오지 않는다.
 function headHtml(v, asLiar) {
   const cat = `<div class="qhint">${escapeHtml(v.category || '')}</div>`;
@@ -192,7 +200,7 @@ export default {
       } else {
         root.querySelector('#lrNote').textContent =
           `${players.filter(p => p.hasSubmitted).length}/${players.length}명 완료` +
-          (picked ? ` · ${api.nameOf(picked)}를 지목했어요` : '');
+          (picked ? ` · ${api.nameOf(picked)}${objectParticle(api.nameOf(picked))} 지목했어요` : '');
       }
       return;
     }
