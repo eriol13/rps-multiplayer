@@ -95,14 +95,22 @@ check('지목 단계에서 설명 목록이 전원분 내려온다', (A.last.vie
 check('설명 내용이 들어 있다', (A.last.view.hints || []).every(h => typeof h.text === 'string' && h.text.length > 0));
 check('지목 단계에서도 라이어에게는 제시어가 없다', L1.last.view.word === null);
 
-console.log('\n[5] 자기 자신은 지목할 수 없다');
+console.log('\n[5] 자기 자신은 지목할 수 없다 (시민·라이어 모두)');
 K1[0].send({ type: 'submit', value: K1[0].id });
-await wait(250);
-check('자기 자신 지목은 거부됐다', K1[0].p(K1[0].id).hasSubmitted === false);
+L1.send({ type: 'submit', value: WORD, vote: L1.id });
+await wait(300);
+check('시민의 자기 자신 지목은 거부됐다', K1[0].p(K1[0].id).hasSubmitted === false);
+check('라이어의 자기 자신 지목도 거부됐다', L1.p(L1.id).hasSubmitted === false);
+
+console.log('\n[5-1] 라이어도 지목이 필수다 — 추측만 보내면 거부');
+L1.send({ type: 'submit', value: WORD });
+await wait(300);
+check('지목 없는 라이어 제출은 거부됐다', L1.p(L1.id).hasSubmitted === false,
+      JSON.stringify(L1.p(L1.id).sub));
 
 console.log('\n[6] 라이어가 걸리면 지목한 시민이 득점 · 라이어는 제시어를 맞혀 만회');
 K1.forEach(c => c.send({ type: 'submit', value: L1.id }));
-L1.send({ type: 'submit', value: WORD });          // 라이어는 투표 대신 제시어를 추측한다
+L1.send({ type: 'submit', value: WORD, vote: K1[0].id });   // 라이어는 지목 + 추측을 함께 낸다
 await allReveal(1);
 check('라이어를 지목한 시민 3명이 +10점', K1.every(c => A.p(c.id).roundScore === 10),
       JSON.stringify(K1.map(c => A.p(c.id).roundScore)));
@@ -114,41 +122,61 @@ check('결과에서 라이어에게도 제시어가 공개된다', L1.last.view.
 check('라이어의 추측이 정답 처리됐다', A.last.view.guessRight === true && A.last.view.guess === WORD);
 check('왕관은 라이어를 맞힌 시민들에게 간다', A.last.roundWinners.length === 3 && !A.last.roundWinners.includes(L1.id),
       JSON.stringify(A.last.roundWinners));
-check('라이어의 표는 집계되지 않는다 (vote=null)', A.p(L1.id).sub?.vote === null, JSON.stringify(A.p(L1.id).sub));
+check('라이어의 표도 기록된다', A.p(L1.id).sub?.vote === K1[0].id, JSON.stringify(A.p(L1.id).sub));
 
-console.log('\n[7] 라이어가 안 걸리면 라이어만 득점');
+console.log('\n[7] 라이어의 표가 판을 뒤집는다 (오도) → 안 걸린 라이어만 득점');
 await allAt(2, 'hint');
 const L2 = liarOf(), K2 = citizensOf();
 [L2, ...K2].forEach((c, i) => c.send({ type: 'submit', value: `설명${i}` }));
 await allAt(2, 'vote');
-// 시민끼리 서로를 지목해 라이어가 최다 득표를 피하게 만든다
-K2[0].send({ type: 'submit', value: K2[1].id });
+// 시민 표: 라이어 1 · K2[2] 1 · K2[1] 1 → 라이어가 공동 최다라 그대로면 '걸림'.
+// 라이어가 K2[2] 에 표를 얹으면 최다가 K2[2](2표)로 옮겨가 라이어가 빠져나간다.
+const WORD2 = K2[0].last.view.word;
+K2[0].send({ type: 'submit', value: L2.id });
 K2[1].send({ type: 'submit', value: K2[2].id });
 K2[2].send({ type: 'submit', value: K2[1].id });
-L2.send({ type: 'submit', value: '전혀아닌단어' });
+// 제시어까지 맞히지만 안 걸렸으므로 만회 보너스는 없어야 한다 (원작: 추측은 걸렸을 때의 기회)
+L2.send({ type: 'submit', value: WORD2, vote: K2[2].id });
 await allReveal(2);
+check('안 걸린 라이어는 제시어를 맞혀도 보너스가 없다 (15점, 20점 아님)',
+      A.last.view.guessRight === true && A.last.view.caught === false && A.p(L2.id).roundScore === 15,
+      `guessRight=${A.last.view.guessRight} caught=${A.last.view.caught} roundScore=${A.p(L2.id).roundScore}`);
+const votes2 = A.last.players.filter(p => p.sub && p.sub.vote).map(p => p.sub.vote);
+check('라이어도 1표를 받았지만 최다가 아니라 살아남았다',
+      votes2.filter(v => v === L2.id).length === 1 && A.p(L2.id).roundScore === 15,
+      `라이어 득표=${votes2.filter(v => v === L2.id).length} roundScore=${A.p(L2.id).roundScore}`);
+check('라이어가 표를 얹은 쪽이 최다가 됐다',
+      votes2.filter(v => v === K2[2].id).length === 2,
+      `K2[2] 득표=${votes2.filter(v => v === K2[2].id).length}`);
 check('안 걸린 라이어가 +15점', A.p(L2.id).roundScore === 15, `roundScore=${A.p(L2.id).roundScore}`);
 check('시민은 전원 0점', K2.every(c => A.p(c.id).roundScore === 0),
       JSON.stringify(K2.map(c => A.p(c.id).roundScore)));
 check('안 걸렸다는 배너가 뜬다', /안 걸렸/.test(A.last.banner?.text || ''), A.last.banner?.text);
 check('왕관은 라이어에게 간다', A.last.roundWinners.length === 1 && A.last.roundWinners[0] === L2.id);
 
-console.log('\n[8] 공동 최다 득표도 걸린 것으로 본다 · 틀린 추측은 만회 못 한다');
+console.log('\n[8] 공동 최다 득표도 걸린 것으로 본다 · 추측은 비워도 제출된다');
 await allAt(3, 'hint');
 const L3 = liarOf(), K3 = citizensOf();
 [L3, ...K3].forEach((c, i) => c.send({ type: 'submit', value: `설명${i}` }));
 await allAt(3, 'vote');
-// 표가 1표씩 세 갈래로 갈리고, 그중 하나가 라이어 → 공동 최다
+// 표가 1표씩 네 갈래로 갈리고 그중 하나가 라이어 → 공동 최다
 K3[0].send({ type: 'submit', value: L3.id });
 K3[1].send({ type: 'submit', value: K3[2].id });
+// 짐작이 안 가는 라이어: 추측을 비우고 지목만 낸다 (그래야 '혼자 미제출'로 드러나지 않는다).
+// 아직 K3[2]가 안 냈을 때 확인해야 한다 — 전원이 내면 단계가 즉시 넘어가 관측이 안 된다.
+L3.send({ type: 'submit', value: '', vote: K3[1].id });
+await until(K3[0], s => s.players.find(p => p.id === L3.id)?.hasSubmitted === true, 3000, '라이어 제출 반영');
+check('추측을 비워도 지목만으로 제출된다', K3[0].p(L3.id).hasSubmitted === true);
+check('남들 눈에는 라이어도 그냥 제출을 마친 사람이다',
+      K3[0].p(L3.id).hasSubmitted === K3[0].p(K3[1].id).hasSubmitted && K3[0].p(L3.id).sub == null);
 K3[2].send({ type: 'submit', value: K3[0].id });
-L3.send({ type: 'submit', value: '전혀아닌단어' });
 await allReveal(3);
 check('공동 최다 득표여도 라이어를 맞힌 시민은 +10점', A.p(K3[0].id).roundScore === 10,
       `roundScore=${A.p(K3[0].id).roundScore}`);
 check('빗나간 시민은 0점', A.p(K3[1].id).roundScore === 0 && A.p(K3[2].id).roundScore === 0);
-check('걸린 라이어의 틀린 추측은 0점', A.p(L3.id).roundScore === 0, `roundScore=${A.p(L3.id).roundScore}`);
-check('틀린 추측이 표시된다', A.last.view.guessRight === false && A.last.view.guess === '전혀아닌단어');
+check('추측을 안 낸 걸린 라이어는 0점', A.p(L3.id).roundScore === 0, `roundScore=${A.p(L3.id).roundScore}`);
+check('빈 추측은 없는 것으로 처리된다', A.last.view.guess === null && A.last.view.guessRight === false,
+      JSON.stringify([A.last.view.guess, A.last.view.guessRight]));
 
 console.log('\n[9] 라이어는 공평하게 돌아간다 (4판 / 4명)');
 await allAt(4, 'hint');
@@ -159,8 +187,10 @@ check('4판 동안 4명이 한 번씩 라이어를 맡았다', new Set(liarIds).
 [L4, ...K4].forEach((c, i) => c.send({ type: 'submit', value: `설명${i}` }));
 await allAt(4, 'vote');
 K4.forEach(c => c.send({ type: 'submit', value: L4.id }));
-L4.send({ type: 'submit', value: '전혀아닌단어' });
+L4.send({ type: 'submit', value: '전혀아닌단어', vote: K4[0].id });
 await allReveal(4);
+check('라이어가 표를 던져도 전원이 지목하면 걸린다', A.p(L4.id).roundScore === 0,
+      `roundScore=${A.p(L4.id).roundScore}`);
 
 console.log('\n[10] 매치 종료 · 기록');
 check('지난 판 기록에 라이어 표시가 남는다',

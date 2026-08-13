@@ -53,21 +53,23 @@ export default {
       },
       {
         title: '설명이 공개되고 라이어를 지목한다 (25초)',
-        body: '누가 뭐라고 썼는지 전부 공개됩니다. 시민은 라이어라고 생각하는 한 명을 고릅니다(자기 자신은 못 고름). 라이어는 투표 대신 제시어가 무엇이었는지 추측합니다.',
+        body: '누가 뭐라고 썼는지 전부 공개됩니다. 전원이 라이어라고 생각하는 한 명을 고릅니다(자기 자신은 못 고름). 라이어도 똑같이 한 명을 고르는데, 라이어에게 이 표는 추리가 아니라 엉뚱한 사람에게 의심을 몰아 자기를 피하는 수단입니다. 라이어는 여기에 제시어 추측을 함께 적어 낼 수 있습니다(짐작이 안 가면 비워도 됩니다).',
       },
     ],
     scoring: [
       ['라이어를 정확히 지목한 시민', '+10점'],
       ['최다 득표를 피한 라이어', '+15점'],
-      ['라이어가 제시어를 맞히면', '+5점 (걸렸어도)'],
-      ['라이어가 걸리면 시민 외 나머지', '0점'],
+      ['걸린 라이어가 제시어를 맞히면', '+5점 (만회)'],
+      ['빗나간 지목', '0점'],
     ],
     tips: [
       '시민의 딜레마: 너무 정확히 쓰면 라이어가 제시어를 알아채고, 너무 두루뭉술하게 쓰면 자기가 의심받습니다.',
       '어느 것에나 통하는 말("맛있다", "크다")은 라이어의 냄새가 납니다.',
       '라이어는 순서상 불리하지 않습니다 — 전원이 동시에 적기 때문에 아무도 남의 설명을 먼저 보고 베낄 수 없습니다.',
       '카테고리는 후보가 수십 개씩 되도록 넓게 잡혀 있습니다. 라이어가 카테고리만 보고 제시어를 찍을 수는 없습니다.',
+      '라이어의 진짜 무기는 표입니다 — 의심받는 사람에게 표를 얹으면 자기에게 오던 표를 흩을 수 있습니다.',
       '걸려도 제시어를 맞히면 만회합니다. 남들의 설명을 읽고 끝까지 추리해 보세요.',
+      '지목은 전원이 하고 추측은 라이어만 하되 선택입니다 — 그래서 "혼자 아직 안 낸 사람"으로 라이어가 드러나지 않습니다.',
       '라이어는 지금까지 가장 적게 맡은 사람 중에서 뽑힙니다 — 한 사람만 계속 걸리는 일은 없습니다.',
     ],
     demo() {
@@ -100,7 +102,7 @@ export default {
         ? `🎭 ${s.round} / ${s.totalRounds}판 — 아는 척 한 단어!`
         : `🕵️ ${s.round} / ${s.totalRounds}판 — 한 단어로 설명하세요`;
     }
-    if (s.phase === 'collect') return liar ? '🎭 제시어를 추측하세요' : '🕵️ 누가 라이어일까요?';
+    if (s.phase === 'collect') return liar ? '🎭 한 명을 지목하고 제시어도 추측하세요' : '🕵️ 누가 라이어일까요?';
     if (s.phase === 'reveal') return `${s.round} / ${s.totalRounds}판 결과`;
     return null;
   },
@@ -144,35 +146,32 @@ export default {
       return;
     }
 
-    // ---- 2단계: 설명 공개 + 지목 (라이어는 제시어 추측) ----
+    // ---- 2단계: 설명 공개 + 지목 (라이어는 지목 + 제시어 추측을 한 번에) ----
     if (s.phase === 'collect') {
+      const done = api.mySub != null;
+
       const built = ensure(root, `vote-${s.round}`, headHtml(v, iAmLiar) + `
         <div class="qopts" id="lrOpts"></div>` +
         (iAmLiar ? `
         <div class="qform">
-          <input id="lrGuess" placeholder="제시어가 무엇일까요?" maxlength="20" autocomplete="off" />
-          <button class="btn-primary" id="lrGuessSend">추측 제출</button>
+          <input id="lrGuess" placeholder="제시어 추측 — 짐작이 안 가면 비워도 됩니다" maxlength="20" autocomplete="off" />
+          <button class="btn-primary" id="lrGuessSend">지목하고 제출</button>
         </div>` : '') + `
         <div class="qnote" id="lrNote"></div>`);
+      if (built) root.dataset.lrPick = '';
 
-      if (built && iAmLiar) {
-        const send = () => {
-          const t = root.querySelector('#lrGuess').value.trim();
-          if (t) api.submit(t);
-        };
-        root.querySelector('#lrGuessSend').onclick = send;
-        root.querySelector('#lrGuess').onkeydown = (e) => { if (e.key === 'Enter') send(); };
-      }
+      // 시민은 확정된 내 표를, 라이어는 아직 안 낸 선택을 표시한다
+      // (라이어는 지목과 추측을 함께 보내야 해서 누르는 즉시 제출하지 않는다)
+      const picked = iAmLiar ? (root.dataset.lrPick || null)
+                             : (api.mySub != null ? String(api.mySub) : null);
 
-      const picked = (!iAmLiar && api.mySub != null) ? String(api.mySub) : null;
       const hints = v.hints || [];
       root.querySelector('#lrOpts').innerHTML = hints.map(h => {
         const mine = h.id === api.myId;
         const cls = ['qopt'];
         if (mine) cls.push('mine');
         if (picked === h.id) cls.push('picked');
-        // 라이어는 지목하지 않고, 자기 자신도 고를 수 없다
-        if (mine || iAmLiar || !api.canSubmit) cls.push('off');
+        if (mine || !api.canSubmit || (iAmLiar && done)) cls.push('off');   // 자기 자신은 못 고른다
         return `<button type="button" class="${cls.join(' ')}" data-id="${h.id}">
           <span class="fbcol">
             <b>${escapeHtml(api.nameOf(h.id))}</b>
@@ -182,23 +181,45 @@ export default {
         </button>`;
       }).join('') || '<div class="qhint">아무도 설명을 적지 않았어요</div>';
 
-      if (api.canSubmit && !iAmLiar) {
+      const note = root.querySelector('#lrNote');
+      const liarNote = () => {
+        if (done) { note.textContent = '제출했어요 · 결과를 기다리는 중…'; return; }
+        const p = root.dataset.lrPick;
+        note.textContent = p
+          ? `${api.nameOf(p)}${objectParticle(api.nameOf(p))} 지목 · 제시어를 적거나 비워두고 제출하세요`
+          : '한 명을 지목하세요 — 엉뚱한 사람에게 표를 몰면 자기를 피할 수 있습니다.';
+      };
+
+      if (api.canSubmit) {
         root.querySelectorAll('#lrOpts .qopt:not(.off)').forEach(b => {
-          b.onclick = () => api.submit(b.dataset.id);
+          b.onclick = iAmLiar
+            ? () => {   // 라이어는 고르기만 하고, 제출은 추측과 함께 한 번에
+                root.dataset.lrPick = b.dataset.id;
+                root.querySelectorAll('#lrOpts .qopt').forEach(x =>
+                  x.classList.toggle('picked', x.dataset.id === b.dataset.id));
+                liarNote();
+              }
+            : () => api.submit(b.dataset.id);
         });
       }
 
       if (iAmLiar) {
-        const done = api.mySub != null;
-        root.querySelector('#lrGuess').disabled = done;
+        const input = root.querySelector('#lrGuess');
         const gb = root.querySelector('#lrGuessSend');
+        if (built) {
+          const send = () => {
+            if (!root.dataset.lrPick) { liarNote(); return; }
+            api.submit(input.value.trim(), { vote: root.dataset.lrPick });
+          };
+          gb.onclick = send;
+          input.onkeydown = (e) => { if (e.key === 'Enter') send(); };
+        }
+        input.disabled = done;
         gb.disabled = done;
-        gb.textContent = done ? '제출 완료' : '추측 제출';
-        root.querySelector('#lrNote').textContent = done
-          ? '제출했어요 · 지목 결과를 기다리는 중…'
-          : '설명들을 보고 제시어를 맞히면, 걸려도 +5점을 만회합니다.';
+        gb.textContent = done ? '제출 완료' : '지목하고 제출';
+        liarNote();
       } else {
-        root.querySelector('#lrNote').textContent =
+        note.textContent =
           `${players.filter(p => p.hasSubmitted).length}/${players.length}명 완료` +
           (picked ? ` · ${api.nameOf(picked)}${objectParticle(api.nameOf(picked))} 지목했어요` : '');
       }
@@ -237,8 +258,11 @@ export default {
     }).join('') || '<div class="qhint">참가자가 없습니다</div>';
 
     root.querySelector('#lrList').insertAdjacentHTML('beforeend', v.guess
-      ? `<div class="qnote">🎭 라이어의 제시어 추측: “${escapeHtml(v.guess)}” — ${v.guessRight ? '정답! +5점' : '틀렸습니다'}</div>`
-      : `<div class="qnote">🎭 라이어는 제시어를 추측하지 못했습니다</div>`);
+      ? `<div class="qnote">🎭 라이어의 제시어 추측: “${escapeHtml(v.guess)}” — ${
+            !v.guessRight ? '틀렸습니다'
+            : v.caught ? '정답! 걸렸지만 +5점 만회'
+            : '정답이지만 안 걸렸으므로 보너스는 없습니다'}</div>`
+      : `<div class="qnote">🎭 라이어는 제시어를 추측하지 않았습니다</div>`);
   },
 
   // 지난 판 기록: 무슨 설명을 냈는지 (그 판의 라이어였으면 🎭)

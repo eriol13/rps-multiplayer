@@ -66,13 +66,19 @@ export default {
       return true;
     }
 
-    // 지목 단계에서 라이어는 투표하지 않는다 — 어차피 누가 라이어인지 알기 때문에
-    // 그 자리를 '제시어 추측'에 쓴다. 덕분에 단계가 3개로 늘지 않는다.
+    // 지목 단계에서 라이어는 **지목과 제시어 추측을 함께** 한 번에 낸다.
+    //   · 지목: 라이어의 표는 추리가 아니라 오도다 — 애먼 사람에게 표를 몰아 자기를
+    //     피할 수 있어야 한다. 이게 없으면 라이어에게 방어 수단이 설명 하나뿐이다.
+    //   · 추측: 걸렸을 때 만회할 기회. 원래 규칙은 여기서 단계가 하나 더 늘지만,
+    //     같은 제출에 실어 보내 단계를 2개로 유지한다.
+    // 나눠서 두 번 제출하게 하면, 먼저 온 지목으로 단계가 끝나 추측이 날아간다.
     if (player.id === g.liarId) {
+      const target = room.players.get(String(msg.vote || ''));
+      if (!target || !target.playing || !target.connected) return false;
+      if (target.id === player.id) return false;
       const text = String(msg.value || '').trim().slice(0, 20);
-      if (!norm(text)) return false;
-      player.sub.guess = text;
-      player.sub.vote = null;   // 엔진에 '이 단계를 마쳤다'고 알린다 (null 이면 표로 세지 않는다)
+      player.sub.guess = norm(text) ? text : null;   // 짐작이 안 가면 비워도 된다
+      player.sub.vote = target.id;
       return true;
     }
 
@@ -107,10 +113,17 @@ export default {
     g.caught = caught;
     g.guessRight = guessRight;
 
+    // 추측 보너스는 **걸렸을 때만**. 원작에서 제시어 추측은 '지목당한 라이어에게
+    // 주는 마지막 기회'이고, 안 걸렸으면 절차 자체가 없다. 이 엔진은 동시 제출이라
+    // 순서를 만들 수 없어 추측을 미리 받지만, 라이어는 낼 때 걸릴지 모르므로
+    // 여전히 항상 적어 넣게 된다 — 원작의 심리가 그대로 살아난다.
     const catchers = parts.filter(p => p.id !== liar.id && p.sub.vote === liar.id);
-    if (caught) for (const p of catchers) p.roundScore += CITIZEN_CATCH;
-    else liar.roundScore += LIAR_SURVIVE;
-    if (guessRight) liar.roundScore += LIAR_GUESS;
+    if (caught) {
+      for (const p of catchers) p.roundScore += CITIZEN_CATCH;
+      if (guessRight) liar.roundScore += LIAR_GUESS;
+    } else {
+      liar.roundScore += LIAR_SURVIVE;
+    }
 
     const word = g.entry.w;
     if (caught) {
@@ -126,8 +139,7 @@ export default {
     return {
       winners: [liar.id],
       banner: {
-        text: `🕵️ 라이어 ${liar.name}, 끝까지 안 걸렸습니다 — 제시어는 "${word}"` +
-              (guessRight ? ` (제시어까지 맞힘!)` : ''),
+        text: `🕵️ 라이어 ${liar.name}, 끝까지 안 걸렸습니다 — 제시어는 "${word}"`,
         kind: 'win',
       },
     };
