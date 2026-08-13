@@ -5,6 +5,7 @@ import fibbage from './fibbage.js';
 import wavelength from './wavelength.js';
 import mostlikely from './mostlikely.js';
 import samemind from './samemind.js';
+import liar from './liar.js';
 
 export const GAMES = {
   [rps.id]: rps,
@@ -13,6 +14,7 @@ export const GAMES = {
   [wavelength.id]: wavelength,
   [mostlikely.id]: mostlikely,
   [samemind.id]: samemind,
+  [liar.id]: liar,
 };
 export const GAME_LIST = Object.values(GAMES);
 export const DEFAULT_GAME = rps.id;

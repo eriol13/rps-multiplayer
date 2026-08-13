@@ -18,6 +18,7 @@ const SUITES = [
   'wavelength.test.mjs',
   'mostlikely.test.mjs',
   'samemind.test.mjs',
+  'liar.test.mjs',
   'polish.test.mjs',
 ];
 
