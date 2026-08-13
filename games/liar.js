@@ -113,17 +113,15 @@ export default {
     g.caught = caught;
     g.guessRight = guessRight;
 
-    // 추측 보너스는 **걸렸을 때만**. 원작에서 제시어 추측은 '지목당한 라이어에게
-    // 주는 마지막 기회'이고, 안 걸렸으면 절차 자체가 없다. 이 엔진은 동시 제출이라
-    // 순서를 만들 수 없어 추측을 미리 받지만, 라이어는 낼 때 걸릴지 모르므로
-    // 여전히 항상 적어 넣게 된다 — 원작의 심리가 그대로 살아난다.
+    // 추측 보너스는 **걸렸든 안 걸렸든** 준다.
+    // 라이어 게임은 판본마다 추측 기회를 주는 시점이 다르다 — 걸린 라이어에게 주는
+    // '마지막 반격'인 판본도 있고, 안 걸린 라이어에게 주는 '완승 보너스'인 판본도 있다.
+    // 어느 하나를 고르면 다른 쪽으로 하던 사람에게 낯설어지므로 둘 다 인정한다.
+    // 이 엔진은 동시 제출이라 어차피 걸리기 전에 추측을 받으니, 이쪽이 규칙 설명도 짧다.
     const catchers = parts.filter(p => p.id !== liar.id && p.sub.vote === liar.id);
-    if (caught) {
-      for (const p of catchers) p.roundScore += CITIZEN_CATCH;
-      if (guessRight) liar.roundScore += LIAR_GUESS;
-    } else {
-      liar.roundScore += LIAR_SURVIVE;
-    }
+    if (caught) for (const p of catchers) p.roundScore += CITIZEN_CATCH;
+    else liar.roundScore += LIAR_SURVIVE;
+    if (guessRight) liar.roundScore += LIAR_GUESS;
 
     const word = g.entry.w;
     if (caught) {
@@ -139,7 +137,8 @@ export default {
     return {
       winners: [liar.id],
       banner: {
-        text: `🕵️ 라이어 ${liar.name}, 끝까지 안 걸렸습니다 — 제시어는 "${word}"`,
+        text: `🕵️ 라이어 ${liar.name}, 끝까지 안 걸렸습니다 — 제시어는 "${word}"` +
+              (guessRight ? ` (제시어까지 맞혀 +${LIAR_GUESS}점!)` : ''),
         kind: 'win',
       },
     };

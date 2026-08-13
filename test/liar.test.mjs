@@ -135,20 +135,19 @@ const WORD2 = K2[0].last.view.word;
 K2[0].send({ type: 'submit', value: L2.id });
 K2[1].send({ type: 'submit', value: K2[2].id });
 K2[2].send({ type: 'submit', value: K2[1].id });
-// 제시어까지 맞히지만 안 걸렸으므로 만회 보너스는 없어야 한다 (원작: 추측은 걸렸을 때의 기회)
+// 안 걸리고 제시어까지 맞히는 완승 — 15 + 5 = 20점
 L2.send({ type: 'submit', value: WORD2, vote: K2[2].id });
 await allReveal(2);
-check('안 걸린 라이어는 제시어를 맞혀도 보너스가 없다 (15점, 20점 아님)',
-      A.last.view.guessRight === true && A.last.view.caught === false && A.p(L2.id).roundScore === 15,
+check('안 걸리고 제시어까지 맞힌 라이어는 20점',
+      A.last.view.guessRight === true && A.last.view.caught === false && A.p(L2.id).roundScore === 20,
       `guessRight=${A.last.view.guessRight} caught=${A.last.view.caught} roundScore=${A.p(L2.id).roundScore}`);
 const votes2 = A.last.players.filter(p => p.sub && p.sub.vote).map(p => p.sub.vote);
 check('라이어도 1표를 받았지만 최다가 아니라 살아남았다',
-      votes2.filter(v => v === L2.id).length === 1 && A.p(L2.id).roundScore === 15,
-      `라이어 득표=${votes2.filter(v => v === L2.id).length} roundScore=${A.p(L2.id).roundScore}`);
+      votes2.filter(v => v === L2.id).length === 1 && A.last.view.caught === false,
+      `라이어 득표=${votes2.filter(v => v === L2.id).length} caught=${A.last.view.caught}`);
 check('라이어가 표를 얹은 쪽이 최다가 됐다',
       votes2.filter(v => v === K2[2].id).length === 2,
       `K2[2] 득표=${votes2.filter(v => v === K2[2].id).length}`);
-check('안 걸린 라이어가 +15점', A.p(L2.id).roundScore === 15, `roundScore=${A.p(L2.id).roundScore}`);
 check('시민은 전원 0점', K2.every(c => A.p(c.id).roundScore === 0),
       JSON.stringify(K2.map(c => A.p(c.id).roundScore)));
 check('안 걸렸다는 배너가 뜬다', /안 걸렸/.test(A.last.banner?.text || ''), A.last.banner?.text);
