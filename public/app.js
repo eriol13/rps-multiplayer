@@ -14,6 +14,9 @@ let lastState = null;   // 결과 이미지를 만들 때 쓴다
 // 편집기를 다시 열 때 쓸 원본은 여기 들고 있는다.
 let myDeck = [];
 let myDeckName = '';
+// 잠긴 방(비공개+비밀번호)에 쓴 비밀번호. 초대 링크에 실어 보내고 재접속에도 쓴다.
+let myPass = '';
+let pendingJoin = null;   // 방금 입장을 시도한 정보 (비밀번호를 다시 물을 때 쓴다)
 
 // ---------- 세션 (새로고침·끊김에서 자리 복구) ----------
 // sessionStorage = 탭 단위. 새로고침엔 살아남고, 탭을 닫으면 사라진다.
@@ -21,8 +24,8 @@ const SESSION_KEY = 'minigame.session';
 const RECONNECT_TRIES = 12, RECONNECT_DELAY = 2000;   // 최대 ~24초 (서버 유예 30초 안쪽)
 let reconnectTries = 0;
 
-function saveSession(room, token, name) {
-  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ room, token, name })); } catch {}
+function saveSession(room, token, name, pass) {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ room, token, name, pass })); } catch {}
 }
 function loadSession() {
   try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
@@ -89,7 +92,10 @@ $('editorModal').onclick = (e) => { if (e.target === $('editorModal')) $('editor
 
 // ---------- 진입 ----------
 // 초대 링크(?room=...)로 접속한 경우: 방 선택 없이 닉네임만 받고 바로 입장
-const invitedRoom = new URLSearchParams(location.search).get('room');
+// 잠긴 방의 초대 링크는 비밀번호(?pw=)를 함께 실어 보내므로 친구는 그냥 누르면 된다.
+const inviteParams = new URLSearchParams(location.search);
+const invitedRoom = inviteParams.get('room');
+const invitedPass = inviteParams.get('pw') || '';
 if (invitedRoom) {
   $('modeButtons').classList.add('hidden');
   $('lobby').classList.add('hidden');
@@ -99,7 +105,7 @@ if (invitedRoom) {
   loadLobby();
 }
 $('inviteJoinBtn').onclick = () => {
-  connect($('name').value.trim() || '익명', invitedRoom, null, 'join');
+  connect($('name').value.trim() || '익명', invitedRoom, null, 'join', null, { password: invitedPass });
 };
 
 // 새로고침으로 들어온 경우: 저장된 자리로 바로 복귀 시도
@@ -108,7 +114,7 @@ const saved = loadSession();
 if (saved && saved.token && (!invitedRoom || invitedRoom === saved.room)) {
   $('login').classList.add('hidden');
   $('reconnecting').classList.remove('hidden');
-  connect(saved.name, saved.room, null, 'join', saved.token);
+  connect(saved.name, saved.room, null, 'join', saved.token, { password: saved.pass });
 } else if (saved) {
   clearSession();
 }
@@ -226,17 +232,56 @@ $('showJoin').onclick   = () => { $('modeButtons').classList.add('hidden'); show
 $('backFromCreate').onclick = () => { $('createPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); showLobby(true); $('loginError').classList.add('hidden'); loadLobby(); };
 $('backFromJoin').onclick   = () => { $('joinPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); showLobby(true); $('loginError').classList.add('hidden'); loadLobby(); };
 
+// 비밀번호는 비공개 방에만 걸 수 있다 — 체크했을 때만 입력칸을 보여준다
+$('createPrivate').onchange = () => {
+  $('privatePassRow').classList.toggle('hidden', !$('createPrivate').checked);
+};
+
 $('createBtn').onclick = () => {
   const name = $('name').value.trim() || '익명';
   const room = $('createRoom').value.trim() || 'lobby';
   const rounds = Math.min(20, Math.max(1, parseInt($('createRounds').value) || 3));
-  connect(name, room, rounds, 'create', null, $('createPublic').checked);
+  const isPrivate = $('createPrivate').checked;
+  connect(name, room, rounds, 'create', null, {
+    private: isPrivate,
+    password: isPrivate ? $('createPass').value.trim() : '',
+  });
 };
 $('joinBtn').onclick = () => {
   const name = $('name').value.trim() || '익명';
   const room = $('joinRoom').value.trim();
   if (!room) { showLoginError('방 이름을 입력하세요.'); return; }
   connect(name, room, null, 'join');
+};
+
+// ---------- 잠긴 방: 비밀번호 물어보기 ----------
+function askPassword(errorText) {
+  $('modeButtons').classList.add('hidden');
+  showLobby(false);
+  $('createPanel').classList.add('hidden');
+  $('joinPanel').classList.add('hidden');
+  $('invitePanel').classList.add('hidden');
+  $('passPanel').classList.remove('hidden');
+  $('passRoomName').textContent = pendingJoin.room;
+  $('joinPass').value = '';
+  if (errorText) showLoginError(errorText);
+  else $('loginError').classList.add('hidden');
+  $('joinPass').focus();
+}
+$('passBtn').onclick = () => {
+  connect(pendingJoin.name, pendingJoin.room, null, 'join', null, { password: $('joinPass').value.trim() });
+};
+$('joinPass').onkeydown = (e) => { if (e.key === 'Enter') $('passBtn').click(); };
+$('passBack').onclick = () => {
+  $('passPanel').classList.add('hidden');
+  $('loginError').classList.add('hidden');
+  if (invitedRoom) {
+    $('invitePanel').classList.remove('hidden');
+  } else {
+    $('modeButtons').classList.remove('hidden');
+    showLobby(true);
+    loadLobby();
+  }
 };
 
 function showLoginError(text) {
@@ -246,11 +291,15 @@ function showLoginError(text) {
 }
 
 // ---------- 연결 ----------
-function connect(name, room, rounds, mode, token, isPublic) {
+function connect(name, room, rounds, mode, token, opts = {}) {
+  const password = opts.password || '';
+  pendingJoin = { name, room, password };
+  myPass = password;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({
-    type: 'join', name, room, rounds, mode, token, game: pickedGame, public: !!isPublic,
+    type: 'join', name, room, rounds, mode, token, game: pickedGame,
+    private: !!opts.private, password,
   }));
   ws.onmessage = (e) => handle(JSON.parse(e.data));
   ws.onclose = () => scheduleReconnect();
@@ -269,7 +318,7 @@ function scheduleReconnect() {
   }
   reconnectTries++;
   if (inGame) $('status').textContent = `🔄 연결이 끊겼습니다. 다시 연결하는 중… (${reconnectTries}/${RECONNECT_TRIES})`;
-  setTimeout(() => connect(s.name, s.room, null, 'join', s.token), RECONNECT_DELAY);
+  setTimeout(() => connect(s.name, s.room, null, 'join', s.token, { password: s.pass }), RECONNECT_DELAY);
 }
 
 function handle(msg) {
@@ -278,8 +327,14 @@ function handle(msg) {
     reconnectTries = RECONNECT_TRIES;   // 서버가 거절한 것이므로 재시도하지 않음
     $('reconnecting').classList.add('hidden');
     $('login').classList.remove('hidden');
-    showLoginError(msg.message);
     if (ws) { ws.onclose = null; ws.close(); }
+    // 잠긴 방이면 실패로 끝내지 않고 비밀번호를 물어본다
+    // (틀렸을 때만 빨간 안내 — 처음 묻는 것은 실수가 아니다)
+    if (msg.code === 'password' && pendingJoin) {
+      askPassword(pendingJoin.password ? msg.message : '');
+      return;
+    }
+    showLoginError(msg.message);
     return;
   }
   if (msg.type === 'joined') {
@@ -287,10 +342,12 @@ function handle(msg) {
     currentRoom = msg.room;
     inGame = true;
     reconnectTries = 0;
-    saveSession(msg.room, msg.token, $('name').value.trim() || loadSession()?.name || '익명');
+    saveSession(msg.room, msg.token, $('name').value.trim() || loadSession()?.name || '익명', myPass);
     setGame(msg.game);
     $('reconnecting').classList.add('hidden');
     $('login').classList.add('hidden');
+    $('passPanel').classList.add('hidden');
+    $('loginError').classList.add('hidden');
     $('game').classList.remove('hidden');
     if (myDeck.length) sendDeck();   // 들어오기 전에 만들어 둔 문제가 있으면 올린다
   } else if (msg.type === 'state') {
@@ -744,6 +801,8 @@ function leaveRoom() {
   if (ws) { ws.onclose = null; try { ws.close(); } catch {} }
   ws = null; inGame = false; myId = null; myReady = false; mySub = null;
   phase = 'waiting'; stepKey = null; overlayDismissed = false; reconnectTries = 0;
+  myPass = ''; pendingJoin = null;
+  $('passPanel').classList.add('hidden');
   $('reconnecting').classList.add('hidden');
   $('game').classList.add('hidden');
   $('overlay').classList.add('hidden');
@@ -769,12 +828,14 @@ $('overlayLeaveBtn').onclick = leaveRoom;
 
 // 초대 링크 복사 (현재 방 기준)
 $('copyInviteBtn').onclick = async () => {
-  const link = `${location.origin}/?room=${encodeURIComponent(currentRoom)}`;
+  // 잠긴 방이면 비밀번호까지 링크에 실어 준다 (받는 사람은 그냥 누르면 들어온다)
+  const link = `${location.origin}/?room=${encodeURIComponent(currentRoom)}`
+    + (myPass ? `&pw=${encodeURIComponent(myPass)}` : '');
   const btn = $('copyInviteBtn');
   const done = (txt) => { btn.textContent = txt; setTimeout(() => { btn.textContent = '🔗 초대 링크 복사'; }, 1800); };
   try {
     await navigator.clipboard.writeText(link);
-    done('✅ 복사됨! 친구에게 붙여넣기');
+    done(myPass ? '✅ 복사됨! (비밀번호 포함)' : '✅ 복사됨! 친구에게 붙여넣기');
   } catch {
     window.prompt('초대 링크 (복사하세요):', link);   // 클립보드 권한 없을 때
   }

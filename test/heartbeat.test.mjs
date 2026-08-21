@@ -39,7 +39,7 @@ function join(payload) {
 }
 
 console.log('\n[1] 두 명이 공개 방에 들어온다');
-const a = await join({ name: '가', room: 'hb', mode: 'create', game: 'rps', rounds: 3, public: true });
+const a = await join({ name: '가', room: 'hb', mode: 'create', game: 'rps', rounds: 3 });
 const b = await join({ name: '나', room: 'hb', mode: 'join' });
 await wait(300);
 check('공개 목록에 방이 보인다', hasRoom(await listRooms(), 'hb'));

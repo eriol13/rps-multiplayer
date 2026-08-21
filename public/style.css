@@ -182,6 +182,8 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   color: #cbd5e1; margin: -4px 0 12px; cursor: pointer;
 }
 .checkrow input { width: auto; margin: 2px 0 0; flex: 0 0 auto; }
+/* 체크박스에 딸린 입력칸 — 들여써서 위 항목에 속한 것으로 보이게 */
+.subfield { padding-left: 24px; border-left: 2px solid #334155; margin: -4px 0 12px 6px; }
 
 .btn-link {
   background: transparent; color: #94a3b8; width: 100%; margin-top: 8px;

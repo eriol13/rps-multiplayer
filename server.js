@@ -70,6 +70,12 @@ function cleanName(raw) {
   return s || '익명';
 }
 
+// 비밀번호는 방장이 정한 그대로 맞춰야 하므로 소문자화 같은 것을 하지 않는다.
+// 보이지 않는 문자만 걸러서 '빈 비밀번호'로 잠긴 방이 생기지 않게 한다.
+function cleanPass(raw) {
+  return String(raw == null ? '' : raw).replace(INVISIBLE, '').trim().slice(0, 20);
+}
+
 function cleanCode(raw) {
   const s = String(raw == null ? '' : raw)
     .replace(INVISIBLE, '')
@@ -105,7 +111,8 @@ function getRoom(code, gameId, totalRounds) {
       history: [],            // 지난 라운드 기록 (누가 뭘 냈고 몇 점인지)
       champions: [],          // 최종 우승자 id들
       championScore: 0,
-      public: false,          // 공개 방이면 첫 화면 목록에 뜬다
+      public: true,           // 공개 방이면 첫 화면 목록에 뜬다 (기본 공개)
+      password: '',           // 비공개 방에만 걸 수 있는 잠금 (비우면 없음)
       hostId: null,           // 방을 만든 사람
       pickerId: null,         // 이번 라운드의 역할 담당(출제자 등), 게임이 정함
       suddenDeath: false,     // 연장 승부(무승부 결착) 진행 중 여부
@@ -545,14 +552,27 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify({ type: 'error', message: `'${code}' 방이 없어요. 방 만들기로 새로 만드세요.` }));
         return;
       }
+      // 잠긴 방(비공개 + 비밀번호)은 비밀번호가 맞아야 들어간다.
+      // 재접속(토큰으로 자리를 되찾는 경우)은 위에서 이미 통과했으므로 다시 묻지 않는다.
+      if (mode === 'join' && prev.password && cleanPass(msg.password) !== prev.password) {
+        ws.send(JSON.stringify({
+          type: 'error', code: 'password',
+          message: msg.password ? '비밀번호가 틀렸어요.' : '비밀번호가 필요한 방입니다.',
+        }));
+        return;
+      }
       if (mode === 'create' && msg.game && !GAMES[msg.game]) {
         ws.send(JSON.stringify({ type: 'error', message: '알 수 없는 게임입니다.' }));
         return;
       }
       room = getRoom(code, msg.game, msg.rounds);
       clearTimeout(room.emptyTimer); room.emptyTimer = null;
-      // 공개 여부는 방을 만든 사람만 정한다. 기본은 비공개(초대 링크로만).
-      if (mode === 'create') room.public = !!msg.public;
+      // 공개 여부는 방을 만든 사람만 정한다. 기본은 공개(첫 화면 목록에 뜬다).
+      // 비공개로 만들 때만 비밀번호를 걸 수 있다.
+      if (mode === 'create') {
+        room.public = !msg.private;
+        room.password = msg.private ? cleanPass(msg.password) : '';
+      }
       // 매치 진행 중(collect/reveal)에 들어오면 이번 매치는 관전, 다음 매치부터 참여
       const midMatch = room.phase === 'collect' || room.phase === 'reveal';
       player = {
