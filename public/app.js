@@ -232,14 +232,17 @@ $('showJoin').onclick   = () => { $('modeButtons').classList.add('hidden'); show
 $('backFromCreate').onclick = () => { $('createPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); showLobby(true); $('loginError').classList.add('hidden'); loadLobby(); };
 $('backFromJoin').onclick   = () => { $('joinPanel').classList.add('hidden'); $('modeButtons').classList.remove('hidden'); showLobby(true); $('loginError').classList.add('hidden'); loadLobby(); };
 
-// 비밀번호는 비공개 방에만 걸 수 있다 — 체크했을 때만 입력칸을 보여준다
+// 비밀번호는 비공개 방에만 걸 수 있다 — 체크했을 때만 입력칸을 보여준다.
+// 비공개 방은 이름을 비우면 서버가 찍기 어려운 이름을 지어 준다(공개는 lobby).
 $('createPrivate').onchange = () => {
-  $('privatePassRow').classList.toggle('hidden', !$('createPrivate').checked);
+  const on = $('createPrivate').checked;
+  $('privatePassRow').classList.toggle('hidden', !on);
+  $('createRoomHint').textContent = on ? '(비우면 아무도 못 맞출 이름으로 지어 드립니다)' : '(비우면 lobby)';
 };
 
 $('createBtn').onclick = () => {
   const name = $('name').value.trim() || '익명';
-  const room = $('createRoom').value.trim() || 'lobby';
+  const room = $('createRoom').value.trim();   // 비우면 서버가 지어 준다
   const rounds = Math.min(20, Math.max(1, parseInt($('createRounds').value) || 3));
   const isPrivate = $('createPrivate').checked;
   connect(name, room, rounds, 'create', null, {

@@ -42,14 +42,14 @@
     <div id="createPanel" class="hidden">
       <label>어떤 게임을 할까요</label>
       <div class="gamepick" id="gamePick"></div>
-      <label>방 이름 <span style="color:#64748b">(비우면 lobby)</span></label>
+      <label>방 이름 <span style="color:#64748b" id="createRoomHint">(비우면 lobby)</span></label>
       <input id="createRoom" placeholder="새 방 이름" maxlength="16" />
       <label class="checkrow">
         <input type="checkbox" id="createPrivate" />
-        <span>비공개 방으로 만들기 <span style="color:#64748b">— 첫 화면 목록에 뜨지 않고 초대 링크로만 들어옵니다</span></span>
+        <span>비공개 방으로 만들기 <span style="color:#64748b">— 목록에 뜨지 않습니다 (방 이름을 아는 사람은 들어올 수 있어요)</span></span>
       </label>
       <div class="subfield hidden" id="privatePassRow">
-        <label>비밀번호 <span style="color:#64748b">(선택 · 비우면 없음)</span></label>
+        <label>비밀번호 <span style="color:#64748b">(선택 · 넣으면 이름을 알아도 못 들어옵니다)</span></label>
         <input id="createPass" type="password" placeholder="비밀번호" maxlength="20" autocomplete="off" />
       </div>
       <label id="roundsLabel">몇 판 <span style="color:#64748b">(1~20)</span></label>

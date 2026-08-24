@@ -76,14 +76,29 @@ function cleanPass(raw) {
   return String(raw == null ? '' : raw).replace(INVISIBLE, '').trim().slice(0, 20);
 }
 
-function cleanCode(raw) {
+// 사람이 직접 치는 방 이름은 화면에서 16자로 막아두지만,
+// 자동으로 지어주는 이름이 최대 20자라 여기서는 여유를 둔다.
+function cleanCode(raw, fallback = 'lobby') {
   const s = String(raw == null ? '' : raw)
     .replace(INVISIBLE, '')
     .trim()
     .toLowerCase()
     .replace(/[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ_-]/g, '')
-    .slice(0, 16);
-  return s || 'lobby';
+    .slice(0, 24);
+  return s || fallback;
+}
+
+// 비공개 방인데 이름을 비웠을 때 지어주는 이름.
+// 'lobby'처럼 뻔한 이름이면 비공개라도 남이 찍어서 들어올 수 있으므로,
+// 길이(10~20자)까지 흩어서 찍기 어렵게 만든다. 헷갈리는 l·o·0·1은 뺐다.
+function randomCode() {
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let code;
+  do {
+    const len = 10 + Math.floor(Math.random() * 11);
+    code = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  } while (rooms.has(code));
+  return code;
 }
 
 /** @type {Map<string, Room>} */
@@ -511,8 +526,10 @@ wss.on('connection', (ws) => {
 
     if (msg.type === 'join') {
       const name = cleanName(msg.name);
-      const code = cleanCode(msg.room);
       const mode = msg.mode === 'join' ? 'join' : 'create';
+      // 비공개 방을 이름 없이 만들면 'lobby' 대신 찍기 어려운 이름을 지어 준다
+      // (비공개는 목록에 안 뜰 뿐, 이름을 아는 사람은 그대로 들어올 수 있다)
+      const code = cleanCode(msg.room, mode === 'create' && msg.private ? randomCode() : 'lobby');
       const token = typeof msg.token === 'string' ? msg.token : null;
 
       // 재접속: 같은 토큰의 자리가 아직 남아 있으면 점수·순번 그대로 복구

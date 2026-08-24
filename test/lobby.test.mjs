@@ -105,7 +105,32 @@ await wait(200);
 check('맞는 비밀번호로는 들어간다', H.last?.players.length === 2, `${H.last?.players.length}명`);
 G.ws.close(); H.ws.close();
 
-console.log('\n[7] 공개 방은 비밀번호를 걸 수 없다 (보내도 무시)');
+console.log('\n[7] 비공개 방은 이름을 비우면 찍기 어려운 이름을 지어 준다');
+const K = mkClient('K');
+await K.connect({ name: '이름없음', room: '', mode: 'create', game: 'rps', private: true });
+check('lobby가 아니다', K.joined.room !== 'lobby', K.joined.room);
+check('10~20자 이름이 나온다', /^[a-z2-9]{10,20}$/.test(K.joined.room), K.joined.room);
+await wait(200);
+check('지어준 이름의 방도 목록에는 안 뜬다', !(await list()).some(r => r.code === K.joined.room));
+
+const K2 = mkClient('K2');
+await K2.connect({ name: '이름없음2', room: '', mode: 'create', game: 'rps', private: true });
+check('만들 때마다 다른 이름이 나온다', K2.joined.room !== K.joined.room,
+      `${K.joined.room} / ${K2.joined.room}`);
+
+// 지어준 이름이 길어도 그대로 다시 들어갈 수 있어야 한다 (이름 자르기에 걸리면 못 들어간다)
+const L = mkClient('L');
+await L.connect({ name: '초대받은사람', room: K.joined.room, mode: 'join' });
+await wait(200);
+check('지어준 이름 그대로 입장된다', L.last?.players.length === 2, `${L.last?.players.length}명`);
+K.ws.close(); K2.ws.close(); L.ws.close();
+
+const M = mkClient('M');
+await M.connect({ name: '공개', room: '', mode: 'create', game: 'rps' });
+check('공개 방은 이름을 비우면 그대로 lobby', M.joined.room === 'lobby', M.joined.room);
+M.ws.close();
+
+console.log('\n[8] 공개 방은 비밀번호를 걸 수 없다 (보내도 무시)');
 const I = mkClient('I');
 await I.connect({ name: '공개방장2', room: 'openpw', mode: 'create', game: 'rps', password: '1234' });
 const J = mkClient('J');
@@ -114,7 +139,7 @@ await wait(200);
 check('공개 방에는 비밀번호 없이 들어간다', J.last?.players.length === 2, `${J.last?.players.length}명`);
 I.ws.close(); J.ws.close();
 
-console.log('\n[8] 이름·방 이름 정리');
+console.log('\n[9] 이름·방 이름 정리');
 const E = mkClient('E');
 await E.connect({ name: '   ​​  ', room: '  My Room!! ', mode: 'create', game: 'rps' });
 await wait(200);
@@ -126,7 +151,7 @@ await F.connect({ name: '  긴   공백   이름  ', room: 'myroom', mode: 'join
 await wait(200);
 check('이름의 연속 공백이 하나로 줄고 앞뒤가 잘린다', F.me().name === '긴 공백 이름', JSON.stringify(F.me().name));
 
-console.log('\n[9] 채팅 도배 제한');
+console.log('\n[10] 채팅 도배 제한');
 E.chats = [];
 F.send({ type: 'chat', text: '하나' });
 F.send({ type: 'chat', text: '둘' });
