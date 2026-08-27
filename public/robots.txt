@@ -1,0 +1,93 @@
+# minigame — 크롤링 정책
+#
+# 일반 검색 크롤링은 허용한다. 다만 AI 학습·AI 입력(RAG·생성형 답변 근거)
+# 용도의 수집은 허용하지 않으며, 이는 권리의 명시적 유보다.
+# (EU 저작권 지침 2019/790 제4조에 따른 유보를 포함한다.)
+#
+# robots.txt는 강제력이 아니라 선언이다. 규약을 지키는 크롤러만 따른다.
+
+User-agent: *
+Content-Signal: search=yes, ai-train=no, ai-input=no
+Allow: /
+
+# --- 아래는 AI 수집 목적 크롤러. 전면 거부한다. ---
+
+# Anthropic
+User-agent: ClaudeBot
+Disallow: /
+User-agent: Claude-Web
+Disallow: /
+User-agent: Claude-User
+Disallow: /
+User-agent: Claude-SearchBot
+Disallow: /
+User-agent: anthropic-ai
+Disallow: /
+
+# OpenAI
+User-agent: GPTBot
+Disallow: /
+User-agent: ChatGPT-User
+Disallow: /
+User-agent: OAI-SearchBot
+Disallow: /
+
+# Google (검색 색인과 분리된 AI 학습용 신호)
+User-agent: Google-Extended
+Disallow: /
+
+# Meta
+User-agent: meta-externalagent
+Disallow: /
+User-agent: FacebookBot
+Disallow: /
+
+# Apple
+User-agent: Applebot-Extended
+Disallow: /
+
+# Amazon
+User-agent: Amazonbot
+Disallow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Disallow: /
+User-agent: Perplexity-User
+Disallow: /
+
+# ByteDance
+User-agent: Bytespider
+Disallow: /
+
+# Common Crawl (다수 LLM의 학습 코퍼스 원천)
+User-agent: CCBot
+Disallow: /
+
+# 기타 AI 수집 크롤러
+User-agent: cohere-ai
+Disallow: /
+User-agent: Cohere-training-data-crawler
+Disallow: /
+User-agent: AI2Bot
+Disallow: /
+User-agent: Ai2Bot-Dolma
+Disallow: /
+User-agent: Diffbot
+Disallow: /
+User-agent: ImagesiftBot
+Disallow: /
+User-agent: Omgilibot
+Disallow: /
+User-agent: YouBot
+Disallow: /
+User-agent: Timpibot
+Disallow: /
+User-agent: Webzio-Extended
+Disallow: /
+User-agent: DuckAssistBot
+Disallow: /
+User-agent: PanguBot
+Disallow: /
+User-agent: CloudflareBrowserRenderingCrawler
+Disallow: /
