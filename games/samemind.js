@@ -15,6 +15,7 @@ export default {
   minPlayers: 3,        // 2명이면 겹치거나 아니거나 둘뿐이라 밋밋하다
   overtime: false,
 
+  revealSeconds: 6,       // 누가 누구와 겹쳤는지 묶음을 읽을 시간
   steps: [{ key: 'answer', seconds: 25, who: 'all' }],
 
   init(g) {

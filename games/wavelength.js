@@ -24,6 +24,7 @@ export default {
   overtime: false,
   bands: BANDS,   // 화면에서 띠를 그릴 때 쓴다
 
+  revealSeconds: 6,       // 목표 지점과 각자 찍은 자리를 눈으로 좇을 시간
   steps: [
     { key: 'clue', seconds: 45, who: 'picker' },
     { key: 'guess', seconds: 30, who: 'others' },

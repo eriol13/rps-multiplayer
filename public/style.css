@@ -440,6 +440,15 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 #overlay button { width: 80%; }
 @keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
+/* 결과를 하나씩 깔 때 — 아직 안 깐 줄은 흐리게, 까이면 떠오른다 */
+.qopt.veiled .fbmeta { visibility: hidden; }
+.qopt.veiled { opacity: .55; }
+.qopt.lifted { animation: lift .35s ease; }
+@keyframes lift {
+  0% { transform: translateY(6px); opacity: .4; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
 /* 시상식 — 우승 이름 아래에 붙는 칭호들 */
 .awards {
   width: 90%; max-width: 380px; margin: -8px 0 20px;

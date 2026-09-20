@@ -48,7 +48,8 @@ const server = http.createServer((req, res) => {
 });
 
 // ---------- 상수 ----------
-const REVEAL_SECONDS = 5;    // 결과 표시 시간
+const REVEAL_SECONDS = 5;    // 결과 표시 시간 (게임이 revealSeconds 로 바꿀 수 있다)
+const REVEAL_MIN = 2, REVEAL_MAX = 15;
 const GRACE_MS = 30000;      // 연결이 끊긴 뒤 자리(점수)를 지켜주는 시간
 const ROOM_TTL_MS = 60000;   // 아무도 없는 방을 남겨두는 시간
 const PING_MS = 30000;       // 연결이 살아있는지 확인하는 주기 (무응답이면 다음 차례에 끊는다)
@@ -209,6 +210,8 @@ function broadcast(room) {
     round: room.round,
     totalRounds: room.totalRounds,
     countdown: room.deadline ? Math.max(0, Math.ceil((room.deadline - Date.now()) / 1000)) : 0,
+    // 결과를 하나씩 까는 연출이 이 시간 안에 끝나야 한다
+    revealSeconds: revealing ? revealSeconds(room) : 0,
     roundWinners: room.roundWinners,
     banner: room.banner,
     history: room.history,
@@ -393,6 +396,16 @@ function advanceStep(room) {
   else reveal(room);
 }
 
+// 결과를 얼마나 보여줄지는 게임이 정한다 — 가위바위보의 한 줄과
+// 가짜 답 섞기의 보기 목록을 같은 시간 동안 띄울 이유가 없다.
+// 보기 수처럼 라운드마다 달라지는 것이 있으므로 함수도 받는다.
+function revealSeconds(room) {
+  const v = room.game.revealSeconds;
+  const n = typeof v === 'function' ? v(room.g, room) : v;
+  if (!Number.isFinite(n)) return REVEAL_SECONDS;
+  return Math.min(REVEAL_MAX, Math.max(REVEAL_MIN, n));
+}
+
 function reveal(room) {
   room.phase = 'reveal';
   room.step = null;
@@ -432,7 +445,7 @@ function reveal(room) {
     } else {
       startRound(room);  // 다음 라운드 자동 진행 (재준비 불필요)
     }
-  }, REVEAL_SECONDS * 1000);
+  }, revealSeconds(room) * 1000);
 }
 
 // 정규 라운드 종료 → 동점이면 연장 승부, 아니면 최종 종료

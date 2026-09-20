@@ -9,6 +9,7 @@ const root = path.join(__dirname, '..');
 const PORT = process.env.TEST_PORT || '3111';
 const SUITES = [
   'rpscards.test.mjs',
+  'revealtime.test.mjs',
   'reconnect.test.mjs',
   'heartbeat.test.mjs',
   'lobby.test.mjs',

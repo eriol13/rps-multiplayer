@@ -12,6 +12,7 @@ export default {
   minPlayers: 3,
   overtime: false,
 
+  revealSeconds: 6,       // 득표 막대와 누가 누구를 찍었는지 읽을 시간
   steps: [{ key: 'vote', seconds: 20, who: 'all' }],
 
   init(g) {

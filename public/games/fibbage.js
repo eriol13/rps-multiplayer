@@ -1,12 +1,32 @@
 // Fibbage형 — 화면 담당 (규칙은 서버 games/fibbage.js)
 import { escapeHtml } from '../util.js';
 
+// 결과를 하나씩 까는 예약. 라운드가 바뀌거나 화면을 떠나면 반드시 취소한다 —
+// 안 그러면 다음 라운드 화면을 지난 라운드의 예약이 건드린다.
+let revealTimers = [];
+function clearReveal() {
+  revealTimers.forEach(clearTimeout);
+  revealTimers = [];
+}
+
 // 화면 종류가 바뀔 때만 다시 그린다 (매초 리렌더에 입력 중인 글자가 날아가지 않게)
 function ensure(root, key, html) {
   if (root.dataset.fk === key) return false;
   root.dataset.fk = key;
   root.innerHTML = html;
   return true;
+}
+
+// 그 보기에 붙는 설명 — 누가 썼고 누가 물었는지
+function metaHtml(o, api) {
+  const authors = (o.authors || []).map(id => api.nameOf(id));
+  const voters = (o.voters || []).map(id => api.nameOf(id));
+  const meta = [];
+  if (o.truth) meta.push('<b class="fbtruth">진짜 답</b>');
+  else if (authors.length) meta.push(`✍️ ${escapeHtml(authors.join(', '))}`);
+  if (voters.length) meta.push(`${o.truth ? '⭕' : '🎣'} ${escapeHtml(voters.join(', '))}`);
+  else meta.push('<span style="color:#475569">아무도 안 골랐어요</span>');
+  return meta.join(' · ');
 }
 
 export default {
@@ -67,6 +87,7 @@ export default {
   },
 
   mount(root) {
+    clearReveal();
     root.dataset.fk = '';
     root.innerHTML = '';
   },
@@ -147,25 +168,34 @@ export default {
       return;
     }
 
-    // ---- 결과: 누가 뭘 썼고 누가 속았는지 ----
+    // ---- 결과: 누가 뭘 썼고 누가 속았는지 — 하나씩 깐다 ----
+    // 배너가 진짜 답을 이미 말해 주므로 여기서 볼 것은 "누가 썼고 누가 물었나"다.
+    // 한 번에 다 펼치면 읽을 새가 없으니 거짓말부터 한 줄씩 깐다.
     const opts = s.view.options || [];
-    ensure(root, `rev-${s.round}`, `
+    const fresh = ensure(root, `rev-${s.round}`, `
       <div class="qtext">${escapeHtml(q.text)}</div>
       <div class="qopts" id="fbOpts"></div>`);
+    if (!fresh) return;   // 연출이 도는 중에는 다시 그리지 않는다
 
-    root.querySelector('#fbOpts').innerHTML = opts.map(o => {
-      const authors = (o.authors || []).map(id => api.nameOf(id));
-      const voters = (o.voters || []).map(id => api.nameOf(id));
-      const meta = [];
-      if (o.truth) meta.push('<b class="fbtruth">진짜 답</b>');
-      else if (authors.length) meta.push(`✍️ ${escapeHtml(authors.join(', '))}`);
-      if (voters.length) meta.push(`${o.truth ? '⭕' : '🎣'} ${escapeHtml(voters.join(', '))}`);
-      else meta.push('<span style="color:#475569">아무도 안 골랐어요</span>');
-      return `<div class="qopt ${o.truth ? 'correct' : ''} off">
+    clearReveal();
+    root.querySelector('#fbOpts').innerHTML = opts.map((o, i) => `
+      <div class="qopt ${o.truth ? 'correct' : ''} off veiled" data-opt="${i}">
         <span class="fbcol"><span>${escapeHtml(o.text)}</span>
-        <span class="fbmeta">${meta.join(' · ')}</span></span>
-      </div>`;
-    }).join('');
+        <span class="fbmeta">${metaHtml(o, api)}</span></span>
+      </div>`).join('');
+
+    // 거짓말 먼저, 진짜 답은 맨 마지막
+    const order = opts.map((o, i) => i).sort((a, b) => (opts[a].truth ? 1 : 0) - (opts[b].truth ? 1 : 0));
+    const span = Math.max(0, (s.revealSeconds || 5) * 1000 - 900);
+    const gap = Math.min(1100, span / Math.max(1, order.length));
+    order.forEach((i, k) => {
+      revealTimers.push(setTimeout(() => {
+        const el = root.querySelector(`[data-opt="${i}"]`);
+        if (!el) return;
+        el.classList.remove('veiled');
+        el.classList.add('lifted');
+      }, 300 + k * gap));
+    });
   },
 
   // 지난 판 기록: 그 판의 보기 목록은 기록에 없어서 진짜를 맞혔는지는 알 수 없다.

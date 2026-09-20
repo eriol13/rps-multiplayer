@@ -23,6 +23,9 @@ export default {
   minPlayers: 3,        // 2명이면 보기가 너무 적어 게임이 안 된다
   overtime: false,
 
+  // 보기를 하나씩 까면서 누가 썼고 누가 속았는지를 보여준다 — 보기가 많을수록 길게
+  revealSeconds: (g) => 3 + (g.options ? g.options.length : 4) * 1.1,
+
   steps: [
     { key: 'bluff', seconds: 45, who: 'all' },
     { key: 'vote', seconds: 25, who: 'all' },

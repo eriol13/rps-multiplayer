@@ -39,6 +39,7 @@ export default {
   id: 'rps',
   minPlayers: 2,
   overtime: true,                                  // 동점이면 연장 승부로 결착
+  revealSeconds: 3,       // 손 세 개와 점수뿐이라 오래 띄울 것이 없다
   steps: [{ key: 'choose', seconds: 10, who: 'all' }],
 
   // 매치 전 설정 (방장만) — 손 카드 모드
