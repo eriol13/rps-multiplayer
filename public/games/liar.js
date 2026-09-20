@@ -28,6 +28,14 @@ function headHtml(v, asLiar) {
   return cat + `<div class="qtext">${escapeHtml(v.word || '')}</div>`;
 }
 
+// 한 사람이 한 말. 2바퀴를 돌았으면 두 마디를 한 줄에 이어 붙인다.
+function hintText(v, id) {
+  const one = (v.hints || []).find(h => h.id === id);
+  const two = (v.hints2 || []).find(h => h.id === id);
+  return [one && one.text, two && two.text].filter(Boolean)
+    .map(t => '“' + t + '”').join(' → ') || null;
+}
+
 export default {
   id: 'liar',
   name: '라이어 게임',
@@ -41,7 +49,7 @@ export default {
 
   guide: {
     players: '3명 이상 (4명 이상이 제맛입니다)',
-    length: '한 판 1분쯤',
+    length: '한 판 1분 20초쯤 (진행 방식에 따라 달라집니다)',
     flow: [
       {
         title: '제시어가 배급된다 — 한 명만 모른다',
@@ -52,8 +60,12 @@ export default {
         body: '제시어를 설명하는 단어 하나를 적습니다. 이 단계에서는 아무도 남의 것을 볼 수 없습니다. 라이어는 카테고리만 보고 그럴듯한 말을 지어내야 합니다.',
       },
       {
-        title: '설명이 공개되고 라이어를 지목한다 (25초)',
-        body: '누가 뭐라고 썼는지 전부 공개됩니다. 전원이 라이어라고 생각하는 한 명을 고릅니다(자기 자신은 못 고름). 라이어도 똑같이 한 명을 고르는데, 라이어에게 이 표는 추리가 아니라 엉뚱한 사람에게 의심을 몰아 자기를 피하는 수단입니다. 라이어는 여기에 제시어 추측을 함께 적어 낼 수 있습니다(짐작이 안 가면 비워도 됩니다).',
+        title: '설명이 공개되고, 한 번 더 적는다 (25초)',
+        body: '첫 마디가 전부 공개된 상태에서 두 번째 단어를 적습니다. 라이어는 이제 남들의 말에서 제시어를 짐작해 말을 맞춰 올 수 있고, 시민은 그 어색함을 잡아내야 합니다 — 이 한 바퀴가 이 게임의 핵심입니다. 방장이 "1바퀴"로 바꾸면 이 단계는 건너뜁니다.',
+      },
+      {
+        title: '라이어를 지목한다 (25초)',
+        body: '전원이 라이어라고 생각하는 한 명을 고릅니다(자기 자신은 못 고름). 라이어도 똑같이 한 명을 고르는데, 라이어에게 이 표는 추리가 아니라 엉뚱한 사람에게 의심을 몰아 자기를 피하는 수단입니다. 라이어는 여기에 제시어 추측을 함께 적어 낼 수 있습니다(짐작이 안 가면 비워도 됩니다).',
       },
     ],
     scoring: [
@@ -65,7 +77,8 @@ export default {
     tips: [
       '시민의 딜레마: 너무 정확히 쓰면 라이어가 제시어를 알아채고, 너무 두루뭉술하게 쓰면 자기가 의심받습니다.',
       '어느 것에나 통하는 말("맛있다", "크다")은 라이어의 냄새가 납니다.',
-      '라이어는 순서상 불리하지 않습니다 — 전원이 동시에 적기 때문에 아무도 남의 설명을 먼저 보고 베낄 수 없습니다.',
+      '첫 바퀴는 전원이 동시에 적으므로 아무도 남의 설명을 먼저 보고 베낄 수 없습니다. 두 번째 바퀴부터가 진짜 승부입니다.',
+      '방장은 대기실에서 진행 방식을 고를 수 있습니다 — 1바퀴(짧게) · 2바퀴(기본) · 2바퀴+토론(채팅으로 서로 캐묻는 시간까지).',
       '카테고리는 후보가 수십 개씩 되도록 넓게 잡혀 있습니다. 라이어가 카테고리만 보고 제시어를 찍을 수는 없습니다.',
       '라이어의 진짜 무기는 표입니다 — 의심받는 사람에게 표를 얹으면 자기에게 오던 표를 흩을 수 있습니다.',
       '제시어 추측은 걸렸으면 만회가 되고 안 걸렸으면 보너스가 됩니다 — 언제나 적어 넣을 값어치가 있습니다.',
@@ -88,6 +101,32 @@ export default {
     demoCaption: '지목 화면. 캐럴만 제시어를 모른 채 "맛있다"로 얼버무렸습니다 — 카테고리 안 아무것에나 되는 말이라 의심을 삽니다.',
   },
 
+  // 대기실 설정 (방장만) — 진행 방식
+  configUI(root, s, api) {
+    const mode = (s.configInfo && s.configInfo.mode) || 'normal';
+    const secs = (s.configInfo && s.configInfo.talkSeconds) || 40;
+    if (root.dataset.ck === mode) return;
+    root.dataset.ck = mode;
+    const hint = {
+      quick: '한 단어씩 한 번만 적고 바로 지목합니다 — 가장 짧습니다.',
+      normal: '남들의 첫 마디를 보고 한 번 더 적습니다. 라이어가 말을 맞춰 오는 것이 이 게임의 묘미입니다.',
+      talk: `2바퀴를 적은 뒤 ${secs}초 동안 채팅으로 이야기한 다음 지목합니다.`,
+    }[mode];
+    root.innerHTML = `
+      <div class="cfgrow">
+        <span class="cfglabel">진행</span>
+        <div class="cfgtabs">
+          <button type="button" class="${mode === 'quick' ? 'on' : ''}" data-mode="quick">1바퀴</button>
+          <button type="button" class="${mode === 'normal' ? 'on' : ''}" data-mode="normal">2바퀴</button>
+          <button type="button" class="${mode === 'talk' ? 'on' : ''}" data-mode="talk">2바퀴+토론</button>
+        </div>
+      </div>
+      <div class="cfghint">${hint}</div>`;
+    root.querySelectorAll('[data-mode]').forEach(b => {
+      b.onclick = () => api.config({ mode: b.dataset.mode });
+    });
+  },
+
   mount(root) {
     root.dataset.lk = '';
     root.innerHTML = '';
@@ -101,6 +140,14 @@ export default {
       return liar
         ? `🎭 ${s.round} / ${s.totalRounds}판 — 아는 척 한 단어!`
         : `🕵️ ${s.round} / ${s.totalRounds}판 — 한 단어로 설명하세요`;
+    }
+    if (s.phase === 'collect' && s.step === 'hint2') {
+      return liar
+        ? '🎭 남들 말에 맞춰 한 번 더 — 들키지 않게!'
+        : '🕵️ 한 번 더 설명하세요 — 라이어가 눈치채지 못하게';
+    }
+    if (s.phase === 'collect' && s.step === 'talk') {
+      return '💬 이야기할 시간 — 채팅으로 서로 캐물어 보세요';
     }
     if (s.phase === 'collect') return liar ? '🎭 한 명을 지목하고 제시어도 추측하세요' : '🕵️ 누가 라이어일까요?';
     if (s.phase === 'reveal') return `${s.round} / ${s.totalRounds}판 결과`;
@@ -117,10 +164,19 @@ export default {
     const iAmLiar = !!v.iAmLiar;
 
     // ---- 1단계: 한 단어로 설명하기 ----
-    if (s.phase === 'collect' && s.step === 'hint') {
-      const built = ensure(root, `hint-${s.round}`, headHtml(v, iAmLiar) + `
+    if (s.phase === 'collect' && (s.step === 'hint' || s.step === 'hint2')) {
+      const second = s.step === 'hint2';
+      // 2바퀴째에는 방금 모인 첫 마디들을 보면서 적는다
+      const seen = second ? `<div class="qopts">${(v.hints || []).map(h => `
+        <button type="button" class="qopt off${h.id === api.myId ? ' mine' : ''}">
+          <span class="fbcol"><b>${escapeHtml(api.nameOf(h.id))}</b>
+            <span class="fbmeta">${h.text ? `“${escapeHtml(h.text)}”` : '⏱ 설명 없음'}</span></span>
+          ${h.id === api.myId ? '<span class="fbmine">나</span>' : ''}
+        </button>`).join('')}</div>` : '';
+
+      const built = ensure(root, `${s.step}-${s.round}`, headHtml(v, iAmLiar) + seen + `
         <div class="qform">
-          <input id="lrText" placeholder="설명하는 단어 하나" maxlength="20" autocomplete="off" />
+          <input id="lrText" placeholder="${second ? '두 번째 설명 — 다른 단어로' : '설명하는 단어 하나'}" maxlength="20" autocomplete="off" />
           <button class="btn-primary" id="lrSend">제출</button>
         </div>
         <div class="qnote" id="lrNote"></div>`);
@@ -141,8 +197,26 @@ export default {
       btn.textContent = done ? '제출 완료' : '제출';
       root.querySelector('#lrNote').textContent = done
         ? `${players.filter(p => p.hasSubmitted).length}/${players.length}명 제출 · 나머지를 기다리는 중…`
-        : (iAmLiar ? '너무 구체적이면 들키고, 너무 두루뭉술해도 들킵니다.'
-                   : '너무 티 나게 쓰면 라이어가 제시어를 알아챕니다.');
+        : second
+          ? (iAmLiar ? '남들이 쓴 말에 자연스럽게 얹으세요 — 그대로 베끼면 티가 납니다.'
+                     : '첫 마디와 같은 말은 아무 정보도 주지 않습니다.')
+          : (iAmLiar ? '너무 구체적이면 들키고, 너무 두루뭉술해도 들킵니다.'
+                     : '너무 티 나게 쓰면 라이어가 제시어를 알아챕니다.');
+      return;
+    }
+
+    // ---- 사이: 이야기할 시간 (아무도 제출하지 않는다 — 채팅으로만) ----
+    if (s.phase === 'collect' && s.step === 'talk') {
+      ensure(root, `talk-${s.round}`, headHtml(v, iAmLiar) + `
+        <div class="qopts">${players.map(p => {
+          const t = hintText(v, p.id);
+          return `<button type="button" class="qopt off${p.id === api.myId ? ' mine' : ''}">
+            <span class="fbcol"><b>${escapeHtml(p.name)}</b>
+              <span class="fbmeta">${t ? escapeHtml(t) : '⏱ 설명 없음'}</span></span>
+            ${p.id === api.myId ? '<span class="fbmine">나</span>' : ''}
+          </button>`;
+        }).join('')}</div>
+        <div class="qnote">💬 아래 채팅으로 이야기하세요. 시간이 다 되면 지목으로 넘어갑니다.</div>`);
       return;
     }
 
@@ -175,7 +249,7 @@ export default {
         return `<button type="button" class="${cls.join(' ')}" data-id="${h.id}">
           <span class="fbcol">
             <b>${escapeHtml(api.nameOf(h.id))}</b>
-            <span class="fbmeta">${h.text ? `“${escapeHtml(h.text)}”` : '⏱ 설명 없음'}</span>
+            <span class="fbmeta">${hintText(v, h.id) ? escapeHtml(hintText(v, h.id)) : '⏱ 설명 없음'}</span>
           </span>
           ${mine ? '<span class="fbmine">나</span>' : ''}
         </button>`;
@@ -245,11 +319,12 @@ export default {
 
     root.querySelector('#lrList').innerHTML = rows.map(r => {
       const isLiar = r.p.id === v.liarId;
-      const hint = r.p.sub && r.p.sub.hint;
+      const hint = [r.p.sub && r.p.sub.hint, r.p.sub && r.p.sub.hint2]
+        .filter(Boolean).map(t => '“' + escapeHtml(t) + '”').join(' → ');
       return `
         <div class="mlrow ${isLiar ? 'win' : ''}">
           <div class="mlhead">
-            <span>${isLiar ? '🎭 ' : ''}${escapeHtml(r.p.name)} — ${hint ? `“${escapeHtml(hint)}”` : '⏱ 설명 없음'}</span>
+            <span>${isLiar ? '🎭 ' : ''}${escapeHtml(r.p.name)} — ${hint || '⏱ 설명 없음'}</span>
             <span class="mlcount">${r.voters.length}표</span>
           </div>
           <div class="mlbar"><div style="width:${Math.round(r.voters.length / Math.max(1, players.length) * 100)}%"></div></div>
@@ -269,9 +344,9 @@ export default {
   historyCell(e) {
     if (!e.sub) return '⏱';
     const mark = e.sub.liar ? '🎭' : '';
-    const t = e.sub.hint;
+    const t = [e.sub.hint, e.sub.hint2].filter(Boolean).join('·');
     if (!t) return mark + '⏱';
-    const short = t.length > 4 ? t.slice(0, 4) + '…' : t;
+    const short = t.length > 5 ? t.slice(0, 5) + '…' : t;
     return mark + escapeHtml(short);
   },
 

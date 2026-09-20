@@ -170,9 +170,11 @@ function participants(room) {
 
 // 이번 단계에 제출할 수 있는 사람들
 //   all=겨루는 전원 · picker=이번 라운드 역할 담당 · others=역할 담당을 뺀 나머지
+//   none=아무도 내지 않는 단계 (채팅으로 이야기만 하는 토론 시간 등)
 function eligible(room, step) {
   const base = participants(room);
   if (!step) return base;
+  if (step.who === 'none') return [];
   if (step.who === 'picker') return base.filter(p => p.id === room.pickerId);
   if (step.who === 'others') return base.filter(p => p.id !== room.pickerId);
   return base;
@@ -367,6 +369,12 @@ function scheduleBotMoves(room, step, secs) {
 // 이 단계에 낼 사람이 다 냈으면 기다리지 않고 넘어간다
 function maybeAdvance(room) {
   if (room.phase !== 'collect') return;
+  // 아무도 내지 않는 단계(토론 시간)는 제한시간이 다 될 때까지 기다린다.
+  // 제한시간이 없으면 기다릴 이유가 없다 — 이번 방이 안 쓰는 단계라는 뜻이다.
+  if (room.step && room.step.who === 'none') {
+    if (!room.deadline) advanceStep(room);
+    return;
+  }
   const need = eligible(room, room.step);
   if (need.every(p => hasSubmitted(room, p, room.step))) advanceStep(room);
 }

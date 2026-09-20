@@ -1,5 +1,7 @@
 // "라이어 게임" 검증: 제시어 은닉(라이어에게 안 감), 정체 은닉, 지목 채점,
 //                     공동 최다 득표 처리, 라이어 공평 로테이션
+// 진행 방식은 '1바퀴'로 고정한다 — 여기서 보려는 것은 채점과 은닉이지 단계 수가 아니다.
+// 2바퀴·토론은 liar2.test.mjs 가 따로 본다.
 import { WebSocket } from 'ws';
 
 const URL = `ws://127.0.0.1:${process.env.PORT || 3111}`;
@@ -60,6 +62,9 @@ await B.connect({ name: '밥', room: 'lrtest', mode: 'join' });
 await C.connect({ name: '캐럴', room: 'lrtest', mode: 'join' });
 await D.connect({ name: '데이브', room: 'lrtest', mode: 'join' });
 check('방의 게임이 liar 다', A.joined.game === 'liar', A.joined.game);
+A.send({ type: 'config', mode: 'quick' });
+await until(A, s => s.configInfo && s.configInfo.mode === 'quick', 3000, '1바퀴 모드');
+check('진행 방식을 1바퀴로 맞췄다', A.last.configInfo.mode === 'quick');
 
 console.log('\n[2] 시작 → 설명 단계, 라이어는 한 명이고 제시어를 못 받는다');
 clients.forEach(c => c.send({ type: 'ready', value: true }));

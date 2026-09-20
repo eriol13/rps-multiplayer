@@ -12,15 +12,43 @@ const LIAR_GUESS = 5;       // 라이어가 제시어를 맞혔을 때 (걸렸�
 // 표기 차이로 맞힌 추측이 틀린 것이 되지 않게, 글자와 숫자만 남겨서 비교한다.
 const norm = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
+const TALK_SECONDS = 40;   // 토론 시간 (아무도 제출하지 않고 채팅만 한다)
+
+// 진행 방식 — 방장이 대기실에서 고른다.
+//   quick  설명 1바퀴 (짧게)
+//   normal 설명 2바퀴 ← 기본. 남의 설명을 보고 두 번째 말을 고르는 것이 이 게임의 핵심이다.
+//   talk   설명 2바퀴 + 지목 전에 이야기할 시간
+function mode(room) {
+  const m = room.config.mode;
+  return (m === 'quick' || m === 'talk') ? m : 'normal';
+}
+const twoRounds = (room) => mode(room) !== 'quick';
+const talking = (room) => mode(room) === 'talk';
+
 export default {
   id: 'liar',
   minPlayers: 3,     // 라이어 1 + 시민 2. 4명 이상이 제맛이다.
   overtime: false,   // 연장 승부는 동점자만 남는데, 2명이면 '라이어 1 + 시민 1'이라 게임이 성립하지 않는다
 
+  // 안 쓰는 단계는 건너뛴다 — hint2 는 stepStart 에서 제출을 채워 통과시키고,
+  // talk 은 제한시간이 0이면 엔진이 그냥 넘긴다(아무도 낼 것이 없는 단계다).
   steps: [
     { key: 'hint', seconds: 25, who: 'all' },
+    { key: 'hint2', seconds: 25, who: 'all' },
+    { key: 'talk', seconds: (g, room) => (talking(room) ? TALK_SECONDS : 0), who: 'none' },
     { key: 'vote', seconds: 25, who: 'all' },
   ],
+
+  // 매치 전 설정 (방장만) — 진행 방식
+  configure(room, player, msg) {
+    if (player.id !== room.hostId) return false;
+    if (!['quick', 'normal', 'talk'].includes(msg.mode)) return false;
+    room.config.mode = msg.mode;
+    return true;
+  },
+  configView(room) {
+    return { mode: mode(room), talkSeconds: TALK_SECONDS };
+  },
 
   init(g) {
     g.used = [];        // 한 매치 안에서 같은 제시어가 또 나오지 않게
@@ -47,6 +75,7 @@ export default {
 
     g.entry = WORDS[idx];
     g.hints = null;
+    g.hints2 = null;
     g.caught = null;
     g.guessRight = null;
   },
@@ -54,15 +83,24 @@ export default {
   // 지목 단계가 시작될 때 앞 단계에 모인 설명을 한 번만 굳혀 둔다.
   // (매 브로드캐스트마다 다시 만들면 도중에 나간 사람의 설명이 목록에서 사라진다)
   stepStart(g, room, step, parts) {
-    if (step.key !== 'vote') return;
-    g.hints = parts.map(p => ({ id: p.id, text: p.sub.hint || null }));
+    if (step.key === 'hint') return;
+    if (!g.hints) g.hints = parts.map(p => ({ id: p.id, text: p.sub.hint || null }));
+
+    if (step.key === 'hint2') {
+      // 1바퀴만 하는 방이면 낼 것이 없다 — 채워서 바로 통과시킨다
+      if (!twoRounds(room)) for (const p of parts) p.sub.hint2 = null;
+      return;
+    }
+    if (twoRounds(room) && !g.hints2) {
+      g.hints2 = parts.map(p => ({ id: p.id, text: p.sub.hint2 || null }));
+    }
   },
 
   submit(g, room, player, step, msg) {
-    if (step.key === 'hint') {
+    if (step.key === 'hint' || step.key === 'hint2') {
       const text = String(msg.value || '').trim().slice(0, 20);
       if (!norm(text)) return false;   // 공백·문장부호뿐인 설명은 받지 않는다
-      player.sub.hint = text;
+      player.sub[step.key] = text;
       return true;
     }
 
@@ -159,12 +197,17 @@ export default {
     if (!g.entry) return { category: null };
     const reveal = room.phase === 'reveal';
     const isLiar = player.id === g.liarId;
+    const step = room.step ? room.step.key : null;
+    // 1바퀴 설명은 2바퀴째부터, 2바퀴 설명은 그 뒤부터 보인다 — 적는 중에는 아무것도 안 보인다
+    const afterHints = reveal || step === 'talk' || step === 'vote';
     return {
       category: g.entry.c,
       word: (reveal || !isLiar) ? g.entry.w : null,
       iAmLiar: isLiar,
       liarId: reveal ? g.liarId : null,
-      hints: (reveal || (room.step && room.step.key === 'vote')) ? (g.hints || []) : null,
+      mode: mode(room),
+      hints2: afterHints ? (g.hints2 || null) : null,
+      hints: (afterHints || step === 'hint2') ? (g.hints || []) : null,
       guess: reveal ? (g.liarId && room.players.get(g.liarId)?.sub.guess) || null : null,
       caught: reveal ? g.caught : null,
       guessRight: reveal ? g.guessRight : null,
