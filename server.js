@@ -716,6 +716,18 @@ wss.on('connection', (ws) => {
       if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
       if (!room.game.configure) return;
       if (room.game.configure(room, player, msg)) broadcast(room);
+    } else if (msg.type === 'setrounds') {
+      // 판수 바꾸기 — 방장만, 대기 중에만. 역할이 도는 게임에서 인원수에 맞추는 용도다.
+      if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
+      if (player.id !== room.hostId) return;
+      // 미리 만든 문제가 있으면 문제 수가 곧 판수다 — 따로 못 바꾼다
+      if ((room.config.deck || []).length) return;
+      const n = parseInt(msg.value);
+      if (!Number.isFinite(n)) return;
+      const rounds = Math.min(20, Math.max(1, n));
+      if (rounds === room.totalRounds) return;
+      room.totalRounds = rounds;
+      broadcast(room);
     } else if (msg.type === 'setgame') {
       // 방의 게임 바꾸기 — 방장만, 그리고 대기 중에만.
       // 진행 중에 바꾸면 이미 쌓인 점수·기록이 다른 게임의 것이 되어버린다.

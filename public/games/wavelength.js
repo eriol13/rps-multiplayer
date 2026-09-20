@@ -79,6 +79,23 @@ export default {
     demoCaption: '노란 선이 목표, 초록 띠가 점수 구간, 흰 선이 각자 찍은 곳입니다. 목표와 띠는 힌트 담당에게만 보입니다.',
   },
 
+
+  // 힌트 담당이 매 라운드 돌아간다 — 판수가 인원수와 안 맞으면 누구는 한 번도 못 낸다
+  roundsNote(s) {
+    const n = s.players.filter(p => p.connected).length;
+    const r = s.totalRounds;
+    if (n < 2) return null;
+    if (r % n === 0) return { text: `${n}명이 한 사람당 힌트를 ${r / n}번씩 냅니다.` };
+    if (r < n) {
+      return { text: `${n}명인데 ${r}판이라 ${n - r}명은 힌트를 한 번도 못 냅니다.`, suggest: n };
+    }
+    const more = Math.ceil(r / n) * n;
+    return {
+      text: `${n}명에 ${r}판이라 ${r % n}명만 힌트를 한 번 더 냅니다.`,
+      suggest: more <= 20 ? more : null,
+    };
+  },
+
   mount(root) {
     root.dataset.wk = '';
     root.innerHTML = '';

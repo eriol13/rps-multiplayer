@@ -107,6 +107,25 @@ export default {
     });
   },
 
+
+  // 돌아가며 출제하는 모드에서는 문제 수가 인원수와 맞아야 한 바퀴가 돈다
+  roundsNote(s) {
+    if (!s.configInfo || s.configInfo.picker !== 'rotate') return null;   // 방장 고정이면 순번이 없다
+    if (s.configInfo.deckSize) return null;                               // 미리 만든 문제는 수가 정해져 있다
+    const n = s.players.filter(p => p.connected).length;
+    const r = s.totalRounds;
+    if (n < 2) return null;
+    if (r % n === 0) return { text: `${n}명이 한 사람당 ${r / n}문제씩 냅니다.` };
+    if (r < n) {
+      return { text: `${n}명인데 ${r}문제라 ${n - r}명은 한 문제도 못 냅니다.`, suggest: n };
+    }
+    const more = Math.ceil(r / n) * n;
+    return {
+      text: `${n}명에 ${r}문제라 ${r % n}명만 한 문제를 더 냅니다.`,
+      suggest: more <= 20 ? more : null,
+    };
+  },
+
   // 상태 문구를 게임이 직접 정한다
   status(s, { myId, iSpectator }) {
     const iAsk = s.pickerId === myId;

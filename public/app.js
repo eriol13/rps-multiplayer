@@ -677,6 +677,29 @@ function render(s) {
     badge.textContent = `📋 미리 만든 문제 ${deckSize}개로 진행합니다`;
   } else badge.classList.add('hidden');
 
+  // 판수 조절 — 방장만, 대기 중에만. 미리 만든 문제가 있으면 문제 수가 곧 판수다.
+  const rr = $('roundsrow');
+  if (waiting && iHost && !deckSize) {
+    rr.classList.remove('hidden');
+    $('roundslabel').textContent = `${s.totalRounds}${currentGame.unit || '판'}으로 진행합니다`;
+    $('roundsMinus').disabled = s.totalRounds <= 1;
+    $('roundsPlus').disabled = s.totalRounds >= 20;
+
+    // 역할이 도는 게임은 인원수와 판수가 맞아야 공평하다 — 게임이 직접 알려준다
+    const note = currentGame.roundsNote ? currentGame.roundsNote(s) : null;
+    const nb = $('roundsnote');
+    if (note) {
+      nb.classList.remove('hidden');
+      nb.innerHTML = escapeHtml(note.text) +
+        (note.suggest ? `<button type="button" class="fixbtn" data-fix="${note.suggest}">${note.suggest}${currentGame.unit || '판'}으로 맞추기</button>` : '');
+      const fx = nb.querySelector('[data-fix]');
+      if (fx) fx.onclick = () => setRounds(parseInt(fx.dataset.fix));
+    } else {
+      nb.classList.add('hidden');
+      nb.innerHTML = '';
+    }
+  } else rr.classList.add('hidden');
+
   // 봇 조절 — 대기 중이고, 봇을 지원하는 게임일 때만
   const botRow = $('botrow');
   const bots = s.players.filter(p => p.isBot);
@@ -764,6 +787,13 @@ $('playAgainBtn').onclick = () => {
   overlayDismissed = true;
   $('overlay').classList.add('hidden');
 };
+
+// 판수 조절 (방장)
+function setRounds(n) {
+  if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'setrounds', value: n }));
+}
+$('roundsMinus').onclick = () => lastState && setRounds(lastState.totalRounds - 1);
+$('roundsPlus').onclick = () => lastState && setRounds(lastState.totalRounds + 1);
 
 // 봇 넣기/빼기
 $('botPlus').onclick = () => ws && ws.send(JSON.stringify({ type: 'addbot' }));
