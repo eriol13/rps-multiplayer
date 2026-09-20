@@ -44,7 +44,11 @@ project: minigame
   훅. `'restart'`를 반환하면 다음 단계로 가지 않고 **같은 단계를 처음부터** 다시
   돌린다(제한시간도 초기화). 퀴즈의 '출제자 넘기기'가 이걸 쓴다.
 
-화면 쪽 모듈은 `roundsNote(s)`로 대기실 판수 옆에 한 줄 안내(+권장 판수 버튼)를
+화면 쪽 모듈은 `editor`(+`deckNoun`·`editorLabel`)로 방장이 문제를 직접 만드는
+창을 열 수 있다 — 한두 칸짜리면 `list-editor.js`의 `makeEditor(spec)`를 쓰고, 퀴즈만
+구조가 달라 `quiz-editor.js`를 따로 쓴다. 규칙 모듈은 그 목록을 `configure`로 받아
+`room.config.deck`에 두고 `round()`에서 쓰며, 있으면 판수가 그 개수가 된다.
+또 `roundsNote(s)`로 대기실 판수 옆에 한 줄 안내(+권장 판수 버튼)를
 낼 수 있고(역할이 도는 게임용), `awards(s, h)`로 매치가 끝났을 때 붙을 칭호를 돌려줄 수 있고
 (공통 칭호는 `public/awards.js`가 알아서 붙인다), `configUI(root, s, api)`로 대기실 설정 UI를 직접 그릴 수 있다
 (방장에게만 보이고, `api.config(obj)`가 `configure`로 전달된다).
