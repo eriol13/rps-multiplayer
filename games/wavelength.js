@@ -35,19 +35,45 @@ export default {
     g.turn = -1;
   },
 
+// 방장이 미리 만들어 올린 목록. 있으면 그것만 쓰고 판수도 그 개수가 된다
+// (앱에 들어 있는 기본 목록과 섞지 않는다 — "우리끼리 버전"을 하려는 것이므로).
+  configure(room, player, msg) {
+    if (player.id !== room.hostId) return false;
+    if (!Array.isArray(msg.deck)) return false;
+    const deck = [];
+    for (const it of msg.deck) {
+      const l = String((it && it.l) || '').trim().slice(0, 20);
+      const r = String((it && it.r) || '').trim().slice(0, 20);
+      if (l && r) deck.push({ l, r });
+      if (deck.length >= 20) break;
+    }
+    room.config.deck = deck;
+    if (deck.length) room.totalRounds = deck.length;
+    return true;
+  },
+  configView(room) {
+    return { deckSize: (room.config.deck || []).length };
+  },
+
   round(g, room) {
     const active = [...room.players.values()].filter(p => p.connected && p.playing);
     // 힌트 담당을 매 라운드 돌린다
     g.turn += 1;
     room.pickerId = active.length ? active[g.turn % active.length].id : null;
 
-    const fresh = SPECTRUMS.map((_, i) => i).filter(i => !g.used.includes(i));
-    const pool = fresh.length ? fresh : SPECTRUMS.map((_, i) => i);
-    if (!fresh.length) g.used = [];
-    const idx = pool[Math.floor(Math.random() * pool.length)];
-    g.used.push(idx);
+    const deck = room.config.deck || [];
+    if (deck.length) {
+      const it = deck[(room.round - 1) % deck.length];
+      g.spectrum = [it.l, it.r];
+    } else {
+      const fresh = SPECTRUMS.map((_, i) => i).filter(i => !g.used.includes(i));
+      const pool = fresh.length ? fresh : SPECTRUMS.map((_, i) => i);
+      if (!fresh.length) g.used = [];
+      const idx = pool[Math.floor(Math.random() * pool.length)];
+      g.used.push(idx);
+      g.spectrum = SPECTRUMS[idx];
+    }
 
-    g.spectrum = SPECTRUMS[idx];
     g.target = 5 + Math.floor(Math.random() * 91);   // 5~95 (양 끝은 힌트가 불가능해서 뺀다)
     g.clue = null;
   },

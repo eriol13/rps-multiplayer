@@ -83,6 +83,9 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
 }
 .edtext { flex: 1; font-size: 14px; font-weight: 600; }
+/* 목록형 편집기 — 한 줄에 한두 칸 */
+.edfields { flex: 1; display: grid; gap: 6px; min-width: 0; }
+.edfields input { margin: 0; padding: 9px 10px; font-size: 14px; }
 .edsec { font-size: 11px; color: #64748b; white-space: nowrap; }
 .edopts { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0 2px 30px; font-size: 12px; color: #94a3b8; }
 .edopts .ok { color: #4ade80; font-weight: 700; }

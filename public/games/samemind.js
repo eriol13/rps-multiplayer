@@ -1,5 +1,6 @@
 // 같은 생각 맞추기 — 화면 담당 (규칙은 서버 games/samemind.js)
 import { escapeHtml } from '../util.js';
+import { makeEditor } from './list-editor.js';
 
 // 화면 종류가 바뀔 때만 다시 그린다 (매초 리렌더에 입력 중인 글자가 날아가지 않게)
 function ensure(root, key, html) {
@@ -161,6 +162,18 @@ export default {
     if (!p.sub || !p.sub.answer) return '⏱';
     return p.roundScore > 0 ? '⭕' : '';
   },
+
+  // 방장이 주제를 직접 만들어 올릴 수 있다
+  deckNoun: '주제',
+  editorLabel: '📝 주제 직접 만들기',
+  editor: makeEditor({
+    id: 'samemind',
+    title: '💭 같은 생각 맞추기 — 주제 만들기',
+    noun: '주제',
+    hint: '떠오르는 후보가 서넛쯤 되는 주제가 좋습니다. 하나뿐이면 전원이 같고, 무한하면 아무도 안 겹칩니다.',
+    fields: [{ key: 'topic', placeholder: '예) 분식집에서 시키는 것', max: 40 }],
+    sample: ['우리 팀 회식 장소', '야근할 때 시키는 배달 음식'],
+  }),
 
   awards(s, h) {
     // 🧠 가장 잘 통한 사람 — 나와 같은 답을 낸 사람 수의 합

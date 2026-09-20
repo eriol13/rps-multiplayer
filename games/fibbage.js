@@ -31,11 +31,38 @@ export default {
     { key: 'vote', seconds: 25, who: 'all' },
   ],
 
+// 방장이 미리 만들어 올린 목록. 있으면 그것만 쓰고 판수도 그 개수가 된다
+// (앱에 들어 있는 기본 목록과 섞지 않는다 — "우리끼리 버전"을 하려는 것이므로).
+  configure(room, player, msg) {
+    if (player.id !== room.hostId) return false;
+    if (!Array.isArray(msg.deck)) return false;
+    const deck = [];
+    for (const it of msg.deck) {
+      const text = String((it && it.text) || '').trim().slice(0, 120);
+      const answer = String((it && it.answer) || '').trim().slice(0, 40);
+      if (text && answer) deck.push({ text, answer });
+      if (deck.length >= 20) break;
+    }
+    room.config.deck = deck;
+    if (deck.length) room.totalRounds = deck.length;
+    return true;
+  },
+  // 정답은 절대 내보내지 않는다 — 개수만 알린다
+  configView(room) {
+    return { deckSize: (room.config.deck || []).length };
+  },
+
   init(g) {
     g.used = [];        // 한 매치 안에서 같은 문제가 또 나오지 않게
   },
 
-  round(g) {
+  round(g, room) {
+    const deck = room.config.deck || [];
+    if (deck.length) {
+      g.q = deck[(room.round - 1) % deck.length];
+      g.options = null;
+      return;
+    }
     const fresh = QUESTIONS.map((_, i) => i).filter(i => !g.used.includes(i));
     const pool = fresh.length ? fresh : QUESTIONS.map((_, i) => i);
     if (!fresh.length) g.used = [];   // 문제를 다 썼으면 처음부터 다시

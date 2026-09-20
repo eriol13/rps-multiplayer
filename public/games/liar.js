@@ -1,5 +1,6 @@
 // 라이어 게임 — 화면 담당 (규칙은 서버 games/liar.js)
 import { escapeHtml } from '../util.js';
+import { makeEditor } from './list-editor.js';
 
 // 화면 종류가 바뀔 때만 다시 그린다 (매초 리렌더에 입력 중인 글자가 날아가지 않게)
 function ensure(root, key, html) {
@@ -357,6 +358,21 @@ export default {
     if (!p.sub.hint) return '⏱';
     return p.roundScore > 0 ? '⭕' : '';
   },
+
+  // 방장이 제시어를 직접 만들어 올릴 수 있다
+  deckNoun: '제시어',
+  editorLabel: '📝 제시어 직접 만들기',
+  editor: makeEditor({
+    id: 'liar',
+    title: '🕵️ 라이어 게임 — 제시어 만들기',
+    noun: '제시어',
+    hint: '카테고리는 후보가 수십 개쯤 되도록 넓게 잡으세요. 좁으면 라이어가 카테고리만 보고 찍습니다.',
+    fields: [
+      { key: 'c', placeholder: '카테고리 — 예) 🍽️ 먹고 마시는 것', max: 20 },
+      { key: 'w', placeholder: '제시어 — 예) 떡볶이', max: 20 },
+    ],
+    sample: ['🏢 사무실에 있는 것 / 복합기', '🎬 영화 / 기생충'],
+  }),
 
   awards(s, h) {
     // 🕵️ 완전범죄 — 라이어를 맡고도 안 걸린 횟수

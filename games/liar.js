@@ -41,15 +41,28 @@ export default {
     { key: 'vote', seconds: 25, who: 'all' },
   ],
 
-  // 매치 전 설정 (방장만) — 진행 방식
+  // 매치 전 설정 (방장만) — 진행 방식, 그리고 미리 만들어 올린 제시어 묶음.
+  // 제시어가 있으면 그것만 쓰고 판수도 그 개수가 된다("우리끼리 버전").
   configure(room, player, msg) {
     if (player.id !== room.hostId) return false;
-    if (!['quick', 'normal', 'talk'].includes(msg.mode)) return false;
-    room.config.mode = msg.mode;
+    if (['quick', 'normal', 'talk'].includes(msg.mode)) {
+      room.config.mode = msg.mode;
+      return true;
+    }
+    if (!Array.isArray(msg.deck)) return false;
+    const deck = [];
+    for (const it of msg.deck) {
+      const c = String((it && it.c) || '').trim().slice(0, 20);
+      const w = String((it && it.w) || '').trim().slice(0, 20);
+      if (c && w) deck.push({ c, w });
+      if (deck.length >= 20) break;
+    }
+    room.config.deck = deck;
+    if (deck.length) room.totalRounds = deck.length;
     return true;
   },
   configView(room) {
-    return { mode: mode(room), talkSeconds: TALK_SECONDS };
+    return { mode: mode(room), talkSeconds: TALK_SECONDS, deckSize: (room.config.deck || []).length };
   },
 
   init(g) {
@@ -69,13 +82,17 @@ export default {
     g.liarId = liar ? liar.id : null;
     if (liar) g.liarTurns[liar.id] = (g.liarTurns[liar.id] || 0) + 1;
 
-    const fresh = WORDS.map((_, i) => i).filter(i => !g.used.includes(i));
-    const bag = fresh.length ? fresh : WORDS.map((_, i) => i);
-    if (!fresh.length) g.used = [];   // 제시어를 다 썼으면 처음부터 다시
-    const idx = bag[Math.floor(Math.random() * bag.length)];
-    g.used.push(idx);
-
-    g.entry = WORDS[idx];
+    const deck = room.config.deck || [];
+    if (deck.length) {
+      g.entry = deck[(room.round - 1) % deck.length];
+    } else {
+      const fresh = WORDS.map((_, i) => i).filter(i => !g.used.includes(i));
+      const bag = fresh.length ? fresh : WORDS.map((_, i) => i);
+      if (!fresh.length) g.used = [];   // 제시어를 다 썼으면 처음부터 다시
+      const idx = bag[Math.floor(Math.random() * bag.length)];
+      g.used.push(idx);
+      g.entry = WORDS[idx];
+    }
     g.hints = null;
     g.hints2 = null;
     g.caught = null;

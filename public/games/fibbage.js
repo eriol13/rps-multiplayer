@@ -1,5 +1,6 @@
 // Fibbage형 — 화면 담당 (규칙은 서버 games/fibbage.js)
 import { escapeHtml } from '../util.js';
+import { makeEditor } from './list-editor.js';
 
 // 결과를 하나씩 까는 예약. 라운드가 바뀌거나 화면을 떠나면 반드시 취소한다 —
 // 안 그러면 다음 라운드 화면을 지난 라운드의 예약이 건드린다.
@@ -213,6 +214,21 @@ export default {
     if (!p.sub || p.sub.vote == null) return '⏱';
     return p.sub.vote === truthIdx ? '⭕' : '❌';
   },
+
+  // 방장이 문제를 직접 만들어 올릴 수 있다
+  deckNoun: '문제',
+  editorLabel: '📝 문제 직접 만들기',
+  editor: makeEditor({
+    id: 'fibbage',
+    title: '🎣 가짜 답 섞기 — 문제 만들기',
+    noun: '문제',
+    hint: '남들이 그럴듯한 거짓말을 지어낼 수 있는 문제가 좋습니다. 빈칸은 ___ 처럼 표시하세요.',
+    fields: [
+      { key: 'text', placeholder: '문제 — 예) 우리 회사가 처음 들어온 건물은 ___ 이다', max: 120 },
+      { key: 'answer', placeholder: '진짜 답 — 예) 삼성동 빌딩', max: 40 },
+    ],
+    sample: ['세계에서 가장 긴 강 이름은 ___ 이다 / 나일강'],
+  }),
 
   awards(s, h) {
     // 🤥 최고의 사기꾼 — 내 가짜 답에 넘어간 사람 수의 합

@@ -1,5 +1,6 @@
 // "누가 제일 ~할 것 같아?" — 화면 담당 (규칙은 서버 games/mostlikely.js)
 import { escapeHtml } from '../util.js';
+import { makeEditor } from './list-editor.js';
 
 function ensure(root, key, html) {
   if (root.dataset.mk === key) return false;
@@ -158,6 +159,18 @@ export default {
     if (!p.sub || !p.sub.vote) return '⏱';
     return p.roundScore >= 10 ? '⭕' : '';
   },
+
+  // 방장이 질문을 직접 만들어 올릴 수 있다
+  deckNoun: '질문',
+  editorLabel: '📝 질문 직접 만들기',
+  editor: makeEditor({
+    id: 'mostlikely',
+    title: '👉 누가 제일 ~할 것 같아 — 질문 만들기',
+    noun: '질문',
+    hint: '아는 사이끼리 서로 지목하는 게임입니다. 웃고 넘길 수 있는 것만 넣으세요.',
+    fields: [{ key: 'q', placeholder: '예) 지각을 제일 자주 할 것 같은 사람은?', max: 80 }],
+    sample: ['회의에서 제일 먼저 딴생각할 것 같은 사람은?', '무인도에 떨어져도 살아남을 것 같은 사람은?'],
+  }),
 
   awards(s, h) {
     // 👑 최다 당첨 — 최다 득표자로 뽑힌 횟수

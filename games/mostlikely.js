@@ -15,11 +15,34 @@ export default {
   revealSeconds: 6,       // 득표 막대와 누가 누구를 찍었는지 읽을 시간
   steps: [{ key: 'vote', seconds: 20, who: 'all' }],
 
+// 방장이 미리 만들어 올린 목록. 있으면 그것만 쓰고 판수도 그 개수가 된다
+// (앱에 들어 있는 기본 목록과 섞지 않는다 — "우리끼리 버전"을 하려는 것이므로).
+  configure(room, player, msg) {
+    if (player.id !== room.hostId) return false;
+    if (!Array.isArray(msg.deck)) return false;
+    const deck = msg.deck
+      .map(it => String((it && it.q) || '').trim().slice(0, 80))
+      .filter(Boolean).slice(0, 20)
+      .map(q => ({ q }));
+    room.config.deck = deck;
+    if (deck.length) room.totalRounds = deck.length;
+    return true;
+  },
+  configView(room) {
+    return { deckSize: (room.config.deck || []).length };
+  },
+
   init(g) {
     g.used = [];
   },
 
-  round(g) {
+  round(g, room) {
+    const deck = room.config.deck || [];
+    if (deck.length) {
+      g.q = deck[(room.round - 1) % deck.length].q;
+      g.top = null;
+      return;
+    }
     const fresh = QUESTIONS.map((_, i) => i).filter(i => !g.used.includes(i));
     const pool = fresh.length ? fresh : QUESTIONS.map((_, i) => i);
     if (!fresh.length) g.used = [];

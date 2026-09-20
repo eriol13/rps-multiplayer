@@ -12,9 +12,9 @@ let inGame = false, overlayDismissed = false;
 let pickedGame = DEFAULT_GAME;
 let lastState = null;   // 결과 이미지를 만들 때 쓴다
 // 미리 만든 문제 묶음. 서버는 내용을 되돌려주지 않으므로(정답이 들어 있다)
-// 편집기를 다시 열 때 쓸 원본은 여기 들고 있는다.
-let myDeck = [];
-let myDeckName = '';
+// 편집기를 다시 열 때 쓸 원본은 여기 들고 있는다. 게임마다 형태가 달라 따로 둔다.
+const myDecks = {};
+const deckOf = (id) => (myDecks[id] || (myDecks[id] = { deck: [], name: '' }));
 // 잠긴 방(비공개+비밀번호)에 쓴 비밀번호. 초대 링크에 실어 보내고 재접속에도 쓴다.
 let myPass = '';
 let pendingJoin = null;   // 방금 입장을 시도한 정보 (비밀번호를 다시 물을 때 쓴다)
@@ -53,12 +53,13 @@ function syncRoundsField() {
   const g = GAMES[pickedGame];
   $('roundsLabel').innerHTML = `${g.roundsLabel || '몇 판'} <span style="color:#64748b">(1~20)</span>`;
   $('createRounds').value = g.defaultRounds || 3;
-  // 편집기가 있는 게임(퀴즈)에서만 '미리 만들기' 버튼을 보여준다
+  // 편집기가 있는 게임에서만 '미리 만들기' 버튼을 보여준다
   const btn = $('editorOpenCreate');
   btn.classList.toggle('hidden', !g.editor);
   if (g.editor) {
-    btn.textContent = myDeck.length
-      ? `📝 미리 만든 문제 ${myDeck.length}개 — 확인·수정`
+    const n = deckOf(g.id).deck.length;
+    btn.textContent = n
+      ? `📝 미리 만든 ${g.deckNoun || '문제'} ${n}개 — 확인·수정`
       : (g.editorLabel || '📝 문제 미리 만들기');
   }
 }
@@ -69,12 +70,13 @@ syncRoundsField();
 function openEditor(after) {
   const g = GAMES[currentGame ? currentGame.id : pickedGame];
   if (!g || !g.editor) return;
+  const mine = deckOf(g.id);
   g.editor.open({
-    deck: myDeck,
-    name: myDeckName,
+    deck: mine.deck,
+    name: mine.name,
     onApply: (deck, name) => {
-      myDeck = deck;
-      myDeckName = name || '';
+      mine.deck = deck;
+      mine.name = name || '';
       syncRoundsField();
       if (after) after(deck);
     },
@@ -84,7 +86,8 @@ function sendConfig(obj) {
   if (ws && ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: 'config', ...obj }));
 }
 function sendDeck() {
-  sendConfig({ deck: myDeck });
+  const g = currentGame || GAMES[pickedGame];
+  if (g) sendConfig({ deck: deckOf(g.id).deck });
 }
 $('editorOpenCreate').onclick = () => openEditor();
 $('editorOpenRoom').onclick = () => openEditor(() => sendDeck());
@@ -353,7 +356,7 @@ function handle(msg) {
     $('passPanel').classList.add('hidden');
     $('loginError').classList.add('hidden');
     $('game').classList.remove('hidden');
-    if (myDeck.length) sendDeck();   // 들어오기 전에 만들어 둔 문제가 있으면 올린다
+    if (deckOf(msg.game).deck.length) sendDeck();   // 들어오기 전에 만들어 둔 것이 있으면 올린다
   } else if (msg.type === 'state') {
     lastState = msg;
     render(msg);
@@ -649,9 +652,9 @@ function render(s) {
   if (waiting && iHost && GAME_LIST.length > 1) swapBtn.classList.remove('hidden');
   else { swapBtn.classList.add('hidden'); $('gameSwapModal').classList.add('hidden'); }
 
-  // 게임을 바꾸면 서버의 설정이 비워진다(퀴즈 덱에는 정답이 있어 돌려받지 못한다).
-  // 내가 만들어 둔 문제가 있으면 다시 올린다.
-  if (gameSwapped && iHost && currentGame.editor && myDeck.length) sendDeck();
+  // 게임을 바꾸면 서버의 설정이 비워진다(덱에는 정답이 들어 있어 돌려받지 못한다).
+  // 그 게임으로 만들어 둔 것이 있으면 다시 올린다.
+  if (gameSwapped && iHost && currentGame.editor && deckOf(currentGame.id).deck.length) sendDeck();
 
   // 게임이 직접 그리는 설정 (예: 퀴즈의 출제자 모드) — 방장만, 대기 중에만
   const cfgEl = $('gameconfig');
@@ -667,14 +670,14 @@ function render(s) {
   if (s.configurable && currentGame.editor && waiting && iHost) {
     edBtn.classList.remove('hidden');
     edBtn.textContent = deckSize
-      ? `📝 미리 만든 문제 ${deckSize}개 — 확인·수정`
+      ? `📝 미리 만든 ${currentGame.deckNoun || '문제'} ${deckSize}개 — 확인·수정`
       : (currentGame.editorLabel || '📝 문제 미리 만들기');
   } else edBtn.classList.add('hidden');
 
   const badge = $('deckbadge');
   if (deckSize && waiting) {
     badge.classList.remove('hidden');
-    badge.textContent = `📋 미리 만든 문제 ${deckSize}개로 진행합니다`;
+    badge.textContent = `📋 미리 만든 ${currentGame.deckNoun || '문제'} ${deckSize}개로 진행합니다`;
   } else badge.classList.add('hidden');
 
   // 판수 조절 — 방장만, 대기 중에만. 미리 만든 문제가 있으면 문제 수가 곧 판수다.

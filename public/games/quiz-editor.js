@@ -130,6 +130,7 @@ function editHtml() {
 }
 
 function render() {
+  $('editorTitle').textContent = '📝 퀴즈 문제 만들기';
   const body = $('editorBody');
   body.innerHTML =
     (S.notice ? `<div class="ednotice">${escapeHtml(S.notice)}</div>` : '') +

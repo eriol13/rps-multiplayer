@@ -1,5 +1,6 @@
 // Wavelength형 — 화면 담당 (규칙은 서버 games/wavelength.js)
 import { escapeHtml } from '../util.js';
+import { makeEditor } from './list-editor.js';
 
 function ensure(root, key, html) {
   if (root.dataset.wk === key) return false;
@@ -226,6 +227,21 @@ export default {
     if (!p.sub || p.sub.guess == null) return '⏱';
     return p.roundScore >= 10 ? '🎯' : (p.roundScore > 0 ? '⭕' : '❌');
   },
+
+  // 방장이 축을 직접 만들어 올릴 수 있다
+  deckNoun: '축',
+  editorLabel: '📝 축 직접 만들기',
+  editor: makeEditor({
+    id: 'wavelength',
+    title: '📡 파장 맞추기 — 축 만들기',
+    noun: '축',
+    hint: '양 끝이 분명히 반대이고 그 사이에 무엇이든 놓을 수 있어야 합니다. 정답이 딱 떨어지면 퀴즈가 됩니다.',
+    fields: [
+      { key: 'l', placeholder: '왼쪽 끝 — 예) 차갑다', max: 20 },
+      { key: 'r', placeholder: '오른쪽 끝 — 예) 뜨겁다', max: 20 },
+    ],
+    sample: ['흔하다 ↔ 귀하다', '우리 팀에서 조용하다 ↔ 시끄럽다'],
+  }),
 
   awards(s, h) {
     // 🎯 정중앙 — 목표에서 가장 좁은 띠 안에 들어간 횟수
