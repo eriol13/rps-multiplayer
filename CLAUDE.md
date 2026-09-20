@@ -25,7 +25,8 @@ project: minigame
 
 - `steps: [{ key, seconds, who }]` — 한 라운드 안에서 순서대로 도는 제출 단계.
   `seconds`는 함수 가능(`(g, room) => n`), `0`이면 제한시간 없음.
-  `who`는 `all` · `picker`(그 라운드 역할 담당) · `others`.
+  `who`는 `all` · `picker`(그 라운드 역할 담당) · `others` · `none`(아무도 내지
+  않는 단계 — 채팅으로만 이야기하는 토론 시간. 제한시간이 다 될 때까지 기다린다).
 - `submit(g, room, player, step, msg)` → 유효하면 `player.sub[step.key]`에
   저장하고 `true`. 관전자·연장 대상 외 인원 차단은 엔진이 이미 처리한다.
 - `score(g, room, parts)` → 각 `p.roundScore`를 채우고
