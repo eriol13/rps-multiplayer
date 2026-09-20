@@ -158,4 +158,16 @@ export default {
     if (!p.sub || !p.sub.vote) return '⏱';
     return p.roundScore >= 10 ? '⭕' : '';
   },
+
+  awards(s, h) {
+    // 👑 최다 당첨 — 최다 득표자로 뽑힌 횟수
+    const target = h.top((rs, id) => rs.filter(r => r.log && (r.log.top || []).includes(id)).length);
+    // 🔮 눈치 — 다수파를 맞힌 횟수
+    const reader = h.top((rs) => rs.filter(r => r.log && (r.log.top || []).includes(r.sub.vote)).length);
+    return [
+      h.award('👑', '오늘의 주인공', target, (v) => `${v}번이나 지목당했습니다`),
+      h.award('🔮', '눈치왕', reader, (v) => `분위기를 ${v}번 읽었습니다`),
+    ];
+  },
+
 };

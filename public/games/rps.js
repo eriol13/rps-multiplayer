@@ -72,4 +72,20 @@ export default {
   historyCell(e) {
     return e.sub && e.sub.choose ? EMOJI[e.sub.choose] : '–';
   },
+
+  // 매치가 끝나고 붙는 칭호 (공통 칭호는 public/awards.js)
+  awards(s, h) {
+    // ✊ 외골수 — 세 판 넘게 하면서 같은 손만 낸 사람
+    const stubborn = h.ids.filter(id => {
+      const rs = h.byPlayer.get(id).filter(r => r.sub.choose);
+      return rs.length >= 3 && rs.every(r => r.sub.choose === rs[0].sub.choose);
+    });
+    if (!stubborn.length || stubborn.length === h.ids.length) return [];
+    const hand = EMOJI[h.byPlayer.get(stubborn[0]).find(r => r.sub.choose).sub.choose];
+    return [{
+      icon: '✊', title: '외골수', names: h.names(stubborn),
+      detail: `한 번도 안 바꾸고 ${hand} 만 냈습니다`,
+    }];
+  },
+
 };

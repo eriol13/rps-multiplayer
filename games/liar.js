@@ -144,6 +144,12 @@ export default {
     };
   },
 
+  // 시상식용 — 누가 라이어였고 걸렸는지 (sub.liar 만으로는 걸렸는지를 알 수 없다)
+  roundLog(g) {
+    if (!g.entry || g.caught === null) return null;   // 라이어가 나가 넘어간 판
+    return { word: g.entry.w, liar: g.liarId, caught: !!g.caught, guessRight: !!g.guessRight };
+  },
+
   // 사람마다 다르게 보여야 하는 것이 이 게임의 전부다.
   //   · 제시어는 라이어에게 내려가지 않는다
   //   · 라이어가 누구였는지는 결과 단계에만 내려간다

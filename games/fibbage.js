@@ -117,6 +117,19 @@ export default {
     };
   },
 
+  // 시상식용 — 이 라운드의 사실. 누가 몇 명을 속였는지는 보기 목록에만 있고
+  // 점수에서 역산할 수 없다(맞힌 점수와 속인 점수가 한 숫자에 섞여 있다).
+  roundLog(g) {
+    if (!g.options) return null;
+    const truth = g.options.find(o => o.truth);
+    const fooled = {};                       // 가짜 답을 쓴 사람 -> 속아 넘어간 사람 수
+    for (const o of g.options) {
+      if (o.truth) continue;
+      for (const id of o.authors) fooled[id] = (fooled[id] || 0) + o.voters.length;
+    }
+    return { answer: g.q ? g.q.answer : null, found: truth ? [...truth.voters] : [], fooled };
+  },
+
   // 투표 중에는 누가 썼는지·누가 골랐는지를 숨기고, 내가 쓴 것만 알려준다
   view(g, room, player) {
     if (!g.q) return { q: null };

@@ -20,6 +20,7 @@ const SUITES = [
   'samemind.test.mjs',
   'liar.test.mjs',
   'gameswap.test.mjs',
+  'awards.test.mjs',
   'polish.test.mjs',
 ];
 

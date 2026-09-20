@@ -209,4 +209,20 @@ export default {
     if (!p.sub || p.sub.guess == null) return '⏱';
     return p.roundScore >= 10 ? '🎯' : (p.roundScore > 0 ? '⭕' : '❌');
   },
+
+  awards(s, h) {
+    // 🎯 정중앙 — 목표에서 가장 좁은 띠 안에 들어간 횟수
+    const bull = h.top((rs) => rs.filter(r =>
+      r.log && r.sub.guess != null && Math.abs(r.sub.guess - r.log.target) <= r.log.bull).length);
+    // 🗣 명 힌트 — 내가 힌트를 준 판에서 남들이 가져간 점수의 합
+    const clue = h.top((rs, id) => h.rounds.reduce((sum, r) => {
+      if (!r.log || r.log.picker !== id) return sum;
+      return sum + r.entries.reduce((a, e) => a + (e.id === id ? 0 : (e.roundScore || 0)), 0);
+    }, 0));
+    return [
+      h.award('🎯', '정중앙', bull, (v) => `${v}번 한가운데를 맞혔습니다`),
+      h.award('🗣', '명 힌트', clue, (v) => `내 힌트로 남들이 ${v}점을 가져갔습니다`),
+    ];
+  },
+
 };

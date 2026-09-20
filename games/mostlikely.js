@@ -25,6 +25,7 @@ export default {
     const idx = pool[Math.floor(Math.random() * pool.length)];
     g.used.push(idx);
     g.q = QUESTIONS[idx];
+    g.top = null;
   },
 
   submit(g, room, player, step, msg) {
@@ -45,10 +46,12 @@ export default {
 
     // 전원이 서로 다른 사람을 찍었으면 '다수'가 없으므로 점수를 주지 않는다
     if (max < 2) {
+      g.top = [];
       return { winners: [], banner: { text: '🤷 의견이 완전히 갈렸어요 — 이번 판은 점수 없음', kind: 'draw' } };
     }
 
     const top = new Set([...counts.entries()].filter(([, n]) => n === max).map(([id]) => id));
+    g.top = [...top];
     for (const p of parts) {
       if (top.has(p.sub.vote)) p.roundScore += PICK_POINTS;   // 분위기를 읽었다
       if (top.has(p.id)) p.roundScore += TARGET_POINTS;       // 당첨된 본인
@@ -59,6 +62,11 @@ export default {
       winners: [...top],
       banner: { text: `👑 ${names.join(', ')} — ${max}표`, kind: 'win' },
     };
+  },
+
+  // 시상식용 — 누가 당첨(최다 득표)이었는지
+  roundLog(g) {
+    return g.top ? { q: g.q || null, top: g.top } : null;
   },
 
   // 득표 집계는 화면에서 players[].sub.vote 로 직접 셀 수 있어 따로 내리지 않는다

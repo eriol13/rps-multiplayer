@@ -1,6 +1,7 @@
 // 방·연결·재접속·공용 화면. 게임별 UI는 games/<id>.js 가 담당한다.
 import { GAMES, GAME_LIST, DEFAULT_GAME } from './games/index.js';
 import { escapeHtml, downloadBlob } from './util.js';
+import { collectAwards } from './awards.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -725,10 +726,24 @@ function render(s) {
     $('champName').textContent = s.champions.length > 1 ? `공동 우승: ${names}` : `${names} 우승! 🎉`;
     const ot = s.overtime ? ' · 🔥 연장 승부 끝에!' : '';
     $('champScore').textContent = `${s.totalRounds}판 승부${ot} · 최종 점수 ${s.championScore}점`;
+    renderAwards(s);
     $('overlay').classList.remove('hidden');
   } else {
     $('overlay').classList.add('hidden');
   }
+}
+
+// 시상식 — 우승 이름 아래에 칭호를 붙인다.
+// 계산에 필요한 것(지난 판 기록)은 이미 다 내려와 있어 서버에 더 물을 것이 없다.
+function renderAwards(s) {
+  const box = $('awards');
+  const list = collectAwards(s, currentGame);
+  box.classList.toggle('hidden', !list.length);
+  box.innerHTML = list.map(a => `<div class="award">
+      <span class="aico">${a.icon}</span>
+      <span class="atxt"><b>${escapeHtml(a.title)}</b> — ${escapeHtml(a.names.join(', '))}
+        <small>${escapeHtml(a.detail)}</small></span>
+    </div>`).join('');
 }
 
 // ---------- 입력 ----------

@@ -183,4 +183,16 @@ export default {
     if (!p.sub || p.sub.vote == null) return '⏱';
     return p.sub.vote === truthIdx ? '⭕' : '❌';
   },
+
+  awards(s, h) {
+    // 🤥 최고의 사기꾼 — 내 가짜 답에 넘어간 사람 수의 합
+    const liar = h.top((rs, id) => rs.reduce((a, r) => a + ((r.log && r.log.fooled && r.log.fooled[id]) || 0), 0));
+    // 🔍 거짓말 탐지기 — 진짜 답을 찾아낸 횟수
+    const sharp = h.top((rs, id) => rs.filter(r => r.log && (r.log.found || []).includes(id)).length);
+    return [
+      h.award('🤥', '최고의 사기꾼', liar, (v) => `${v}명을 속여 넘겼습니다`),
+      h.award('🔍', '거짓말 탐지기', sharp, (v) => `진짜 답을 ${v}번 찾아냈습니다`),
+    ];
+  },
+
 };

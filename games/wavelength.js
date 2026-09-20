@@ -102,6 +102,12 @@ export default {
     };
   },
 
+  // 시상식용 — 목표 지점이 없으면 '정중앙이었는지'를 나중에 알 수 없다
+  roundLog(g, room) {
+    if (!g.spectrum || !g.clue) return null;
+    return { target: g.target, clue: g.clue, picker: room.pickerId, bull: BANDS[0].within };
+  },
+
   // 목표 지점은 힌트 담당과 결과 단계에서만 내려간다
   view(g, room, player) {
     if (!g.spectrum) return { spectrum: null };

@@ -282,4 +282,17 @@ export default {
     if (!p.sub.hint) return '⏱';
     return p.roundScore > 0 ? '⭕' : '';
   },
+
+  awards(s, h) {
+    // 🕵️ 완전범죄 — 라이어를 맡고도 안 걸린 횟수
+    const ghost = h.top((rs, id) => rs.filter(r => r.log && r.log.liar === id && !r.log.caught).length);
+    // 🔎 매의 눈 — 시민일 때 라이어를 정확히 지목한 횟수
+    const hawk = h.top((rs, id) => rs.filter(r =>
+      r.log && r.log.liar !== id && r.sub.vote === r.log.liar).length);
+    return [
+      h.award('🕵️', '완전범죄', ghost, (v) => `라이어로 ${v}번 끝까지 안 걸렸습니다`),
+      h.award('🔎', '매의 눈', hawk, (v) => `라이어를 ${v}번 정확히 잡아냈습니다`),
+    ];
+  },
+
 };

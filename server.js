@@ -402,11 +402,15 @@ function reveal(room) {
 
   // 지난 판 기록 — 누가 뭘 냈는지 나중에 되돌아볼 수 있게
   // (p.sub은 다음 라운드에서 새 객체로 교체되므로 그대로 들고 있어도 안전하다)
+  // log 는 게임이 남기는 '이 라운드의 사실'(정답·목표 지점·라이어 정체 등).
+  // 제출물만으로는 알 수 없고, 점수에서 역산하면 점수 상수가 바뀔 때 조용히 틀린다.
+  // 채점이 끝난 뒤에 부르므로 이미 공개된 정보만 담긴다.
   room.history.push({
     round: room.round,
     suddenDeath: room.suddenDeath,
     winners: room.roundWinners,
     entries: parts.map(p => ({ id: p.id, sub: p.sub, roundScore: p.roundScore || 0 })),
+    log: room.game.roundLog ? (room.game.roundLog(room.g, room, parts) || null) : null,
   });
 
   broadcast(room);

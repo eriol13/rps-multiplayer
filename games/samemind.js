@@ -76,6 +76,12 @@ export default {
     };
   },
 
+  // 시상식용 — 어떤 답에 누가 모였는지
+  roundLog(g) {
+    if (!g.groups) return null;
+    return { topic: g.topic || null, groups: g.groups.map(gr => ({ text: gr.text, ids: [...gr.ids] })) };
+  },
+
   // 답 묶기는 서버에서만 하고(정규화 규칙이 두 곳에 생기지 않게) 결과만 내려준다.
   // 제출 중에는 남의 답이 나가지 않는다 — 엔진이 sub를 공개 단계에만 실어준다.
   view(g, room) {

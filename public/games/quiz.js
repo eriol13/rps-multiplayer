@@ -241,4 +241,25 @@ export default {
     if (!p.sub || p.sub.answer == null) return '⏱';
     return p.sub.answer === q.answer ? '⭕' : '❌';
   },
+
+  awards(s, h) {
+    // ⚡ 가장 빠른 손 — 맞힌 문제들의 남은 시간 비율 평균
+    const fastest = h.top((rs) => {
+      const hit = rs.filter(r => r.score > 0 && r.sub.speed != null);
+      if (!hit.length) return 0;
+      return hit.reduce((a, r) => a + r.sub.speed, 0) / hit.length;
+    });
+    // 🎯 전승 — 자기가 답한 문제를 하나도 안 틀렸다 (출제한 문제는 빼고 센다)
+    const perfect = h.ids.filter(id => {
+      const answered = h.byPlayer.get(id).filter(r => r.sub.ask == null);
+      return answered.length >= 2 && answered.every(r => r.score > 0);
+    });
+    return [
+      h.award('⚡', '가장 빠른 손', fastest, (v) => `맞힐 때 평균 ${Math.round(v * 100)}%의 시간을 남겼습니다`),
+      perfect.length && perfect.length < h.ids.length
+        ? { icon: '🎯', title: '전승', names: h.names(perfect), detail: '푼 문제를 하나도 안 틀렸습니다' }
+        : null,
+    ];
+  },
+
 };
