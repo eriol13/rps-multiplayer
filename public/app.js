@@ -360,19 +360,50 @@ function handle(msg) {
     addChat(msg.name, msg.text);
   } else if (msg.type === 'react') {
     floatReaction(msg.name, msg.emoji);
+  } else if (msg.type === 'gamechanged') {
+    const g = GAMES[msg.game];
+    addChat('🎮 안내', `${msg.by} 님이 게임을 ${g ? g.emoji + ' ' + g.name : msg.game}(으)로 바꿨습니다`);
   }
 }
 
-// 방의 게임에 맞춰 화면을 갈아끼운다
+// 방의 게임에 맞춰 화면을 갈아끼운다. 실제로 바뀌었으면 true.
 function setGame(id) {
   const g = GAMES[id] || GAMES[DEFAULT_GAME];
-  if (currentGame && currentGame.id === g.id) return;
+  if (currentGame && currentGame.id === g.id) return false;
   currentGame = g;
   $('title').textContent = `${g.emoji} ${g.name}`;
   $('subtitle').textContent = g.desc;
   $('gamearea').innerHTML = '';
   if (g.mount) g.mount($('gamearea'));
+  return true;
 }
+
+// ---------- 방의 게임 바꾸기 (방장) ----------
+// 방·사람·채팅은 그대로 두고 규칙만 갈아끼운다. 다른 게임을 하려고 방을 새로 파고
+// 초대 링크를 다시 뿌리지 않아도 되게 하는 것이 목적이다.
+function renderGameSwap() {
+  const wrap = $('gameSwapPick');
+  wrap.innerHTML = '';
+  for (const g of GAME_LIST) {
+    const cur = !!currentGame && g.id === currentGame.id;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'gameopt' + (cur ? ' selected' : '');
+    b.disabled = cur;
+    b.innerHTML = `<span class="ico">${g.emoji}</span>
+      <span class="txt"><span class="nm">${g.name}${cur ? ' — 지금 이 게임' : ''}</span>
+      <span class="ds">${g.desc}</span></span>`;
+    b.onclick = () => {
+      $('gameSwapModal').classList.add('hidden');
+      // 판수는 그 게임의 기본값으로 — '몇 문제'와 '몇 판'은 단위부터 다르다
+      if (ws) ws.send(JSON.stringify({ type: 'setgame', game: g.id, rounds: g.defaultRounds || 3 }));
+    };
+    wrap.appendChild(b);
+  }
+}
+$('gameSwapBtn').onclick = () => { renderGameSwap(); $('gameSwapModal').classList.remove('hidden'); };
+$('gameSwapClose').onclick = () => $('gameSwapModal').classList.add('hidden');
+$('gameSwapModal').onclick = (e) => { if (e.target === $('gameSwapModal')) $('gameSwapModal').classList.add('hidden'); };
 
 // ---------- 게임 설명 ----------
 // 규칙은 게임 모듈의 guide 하나에만 있고, 아래 세 군데가 전부 거기서 나온다:
@@ -500,7 +531,7 @@ function renderHistory(s) {
 }
 
 function render(s) {
-  setGame(s.game);
+  const gameSwapped = setGame(s.game);
 
   const prevPhase = phase, prevStep = stepKey;
   phase = s.phase; stepKey = s.step;
@@ -611,6 +642,15 @@ function render(s) {
   const waiting = s.phase === 'waiting' || s.phase === 'gameover';
   const iHost = s.hostId === myId;
   const deckSize = (s.configInfo && s.configInfo.deckSize) || 0;
+
+  // 다른 게임으로 바꾸기 — 방장만, 대기 중에만
+  const swapBtn = $('gameSwapBtn');
+  if (waiting && iHost && GAME_LIST.length > 1) swapBtn.classList.remove('hidden');
+  else { swapBtn.classList.add('hidden'); $('gameSwapModal').classList.add('hidden'); }
+
+  // 게임을 바꾸면 서버의 설정이 비워진다(퀴즈 덱에는 정답이 있어 돌려받지 못한다).
+  // 내가 만들어 둔 문제가 있으면 다시 올린다.
+  if (gameSwapped && iHost && currentGame.editor && myDeck.length) sendDeck();
 
   // 게임이 직접 그리는 설정 (예: 퀴즈의 출제자 모드) — 방장만, 대기 중에만
   const cfgEl = $('gameconfig');

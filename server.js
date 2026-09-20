@@ -232,6 +232,50 @@ function broadcast(room) {
   }
 }
 
+// ---------- 게임 바꾸기 ----------
+// 방을 유지한 채 다른 게임으로 갈아탄다 (방장만, 대기 중에만).
+// 새 게임의 규칙으로 처음부터 시작하므로 점수·기록·설정을 모두 비운다 —
+// 게임마다 점수 단위가 달라서 앞 게임의 점수를 이어받으면 뜻이 없다.
+function switchGame(room, gameId, rounds) {
+  const game = GAMES[gameId];
+  if (!game || game === room.game) return false;
+  clearTimeout(room.timer); room.timer = null;
+  clearBotTimers(room);
+
+  room.game = game;
+  room.g = {};
+  room.config = {};            // 설정은 게임 전용이다 (퀴즈 덱 등)
+  room.history = [];
+  room.round = 0;
+  room.totalRounds = Math.min(20, Math.max(1, parseInt(rounds) || room.totalRounds));
+  room.phase = 'waiting';
+  room.step = null;
+  room.stepIndex = 0;
+  room.deadline = 0;
+  room.roundWinners = [];
+  room.banner = null;
+  room.champions = [];
+  room.championScore = 0;
+  room.pickerId = null;
+  room.suddenDeath = false;
+  room.tiebreakGroup = [];
+  room.overtime = false;
+  for (const p of room.players.values()) {
+    p.score = 0; p.roundScore = 0; p.sub = {};
+    p.ready = false;
+    p.playing = p.connected;   // 앞 매치의 관전자도 이번엔 처음부터 참여
+  }
+
+  // 봇을 못 받는 게임으로 바꿨으면 내보낸다 — 남겨두면 아무것도 내지 않아
+  // 단계마다 제한시간을 다 기다리게 되고, 화면에서 뺄 방법도 사라진다.
+  if (!game.botMove) {
+    for (const p of [...room.players.values()]) {
+      if (p.isBot) { clearTimeout(p.moveTimer); room.players.delete(p.id); }
+    }
+  }
+  return true;
+}
+
 // ---------- 진행 ----------
 function maybeStart(room) {
   if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
@@ -647,6 +691,15 @@ wss.on('connection', (ws) => {
       if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
       if (!room.game.configure) return;
       if (room.game.configure(room, player, msg)) broadcast(room);
+    } else if (msg.type === 'setgame') {
+      // 방의 게임 바꾸기 — 방장만, 그리고 대기 중에만.
+      // 진행 중에 바꾸면 이미 쌓인 점수·기록이 다른 게임의 것이 되어버린다.
+      if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
+      if (player.id !== room.hostId) return;
+      if (!switchGame(room, msg.game, msg.rounds)) return;
+      sendAll(room, { type: 'gamechanged', game: room.game.id, by: player.name });
+      broadcast(room);
+      maybeStart(room);
     } else if (msg.type === 'addbot' || msg.type === 'removebot') {
       // 봇은 대기 중에만 넣고 뺄 수 있다 (매치 도중 인원이 바뀌면 점수가 꼬인다)
       if (room.phase !== 'waiting' && room.phase !== 'gameover') return;

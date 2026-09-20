@@ -19,6 +19,7 @@ const SUITES = [
   'mostlikely.test.mjs',
   'samemind.test.mjs',
   'liar.test.mjs',
+  'gameswap.test.mjs',
   'polish.test.mjs',
 ];
 

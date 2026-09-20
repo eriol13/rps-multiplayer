@@ -95,6 +95,9 @@
 
     <button class="btn-primary" id="readyBtn">준비 완료</button>
 
+    <!-- 방을 유지한 채 다른 게임으로 (방장만, 대기 중에만) -->
+    <button class="btn-guide hidden" id="gameSwapBtn" style="width:100%;margin:10px auto 0">🔄 다른 게임으로 바꾸기</button>
+
     <!-- 매치 전 설정 (방장만) -->
     <div class="hidden" id="gameconfig"></div>
     <button class="btn-guide hidden" id="editorOpenRoom" style="width:100%"></button>
@@ -164,6 +167,20 @@
     <div class="tabbar" id="roomsTabs"></div>
     <div class="modalbody" id="roomsList"></div>
     <div class="modalfoot"><button class="btn-link" id="roomsRefresh">↻ 새로고침</button></div>
+  </div>
+</div>
+
+<!-- 게임 바꾸기 (방장) -->
+<div class="modal hidden" id="gameSwapModal">
+  <div class="modalcard">
+    <div class="modalhead">
+      <b>🔄 다른 게임으로 바꾸기</b>
+      <button class="modalx" id="gameSwapClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="modalbody">
+      <div class="ednotice">방은 그대로 두고 게임만 바꿉니다. 점수와 지난 판 기록은 초기화되고, 모두 다시 준비해야 합니다.</div>
+      <div class="gamepick" id="gameSwapPick"></div>
+    </div>
   </div>
 </div>
 
