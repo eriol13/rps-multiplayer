@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const PORT = process.env.TEST_PORT || '3111';
 const SUITES = [
+  'rpscards.test.mjs',
   'reconnect.test.mjs',
   'heartbeat.test.mjs',
   'lobby.test.mjs',

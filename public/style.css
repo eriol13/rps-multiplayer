@@ -235,7 +235,25 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   background: #0f172a; border: 2px solid #475569; display: flex; align-items: center; justify-content: center;
 }
 .choice.selected { border-color: #6366f1; background: #312e81; }
+.choice.empty { opacity: .3; border-style: dashed; cursor: default; }
+.choice .cardleft {
+  position: absolute; right: -6px; top: -6px; font-size: 12px; font-weight: 800;
+  min-width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 10px;
+  background: #6366f1; color: #fff;
+}
+.choice.empty .cardleft { background: #475569; }
+.choicewrap { position: relative; }
 .btn-random { display: block; width: 100%; background: #334155; color: #e2e8f0; margin-bottom: 4px; }
+
+/* 손 카드 모드 — 남은 카드는 전원 공개 */
+.cardlist { display: grid; gap: 4px; margin: 10px 0 2px; }
+.cardlist .cl {
+  display: flex; align-items: center; gap: 8px; font-size: 13px; color: #cbd5e1;
+  background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 5px 10px;
+}
+.cardlist .cl .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cardlist .cl .h { font-variant-numeric: tabular-nums; }
+.cardlist .cl .h.out { opacity: .3; }
 
 /* 즉석 퀴즈 */
 .qhint {
