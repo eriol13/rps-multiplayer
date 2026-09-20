@@ -13,6 +13,9 @@ const LIAR_GUESS = 5;       // 라이어가 제시어를 맞혔을 때 (걸렸�
 const norm = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
 const TALK_SECONDS = 40;   // 토론 시간 (아무도 제출하지 않고 채팅만 한다)
+// 결과를 바로 까지 않고 표부터 보게 하는 시간. 이 게임은 "누구였게?" 하는
+// 그 몇 초가 절반이라, 배너가 첫 줄에서 답을 말해 버리면 남는 것이 없다.
+const REVEAL_DELAY = 2.5;
 
 // 진행 방식 — 방장이 대기실에서 고른다.
 //   quick  설명 1바퀴 (짧게)
@@ -188,6 +191,8 @@ export default {
           text: `🎯 라이어는 ${liar.name}! 제시어는 "${word}"` +
                 (guessRight ? ` — 그래도 제시어를 맞혀 만회했습니다` : ''),
           kind: 'win',
+          delay: REVEAL_DELAY,
+          veil: '🥁 표를 세는 중…',
         },
       };
     }
@@ -197,6 +202,8 @@ export default {
         text: `🕵️ 라이어 ${liar.name}, 끝까지 안 걸렸습니다 — 제시어는 "${word}"` +
               (guessRight ? ` (제시어까지 맞혀 +${LIAR_GUESS}점!)` : ''),
         kind: 'win',
+        delay: REVEAL_DELAY,
+        veil: '🥁 표를 세는 중…',
       },
     };
   },

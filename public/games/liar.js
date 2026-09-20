@@ -301,8 +301,10 @@ export default {
       return;
     }
 
-    // ---- 결과: 정체·제시어·득표 공개 ----
-    ensure(root, `rev-${s.round}`, `
+    // ---- 결과: 득표를 먼저 보여주고, 잠깐 뒤에 정체가 드러난다 ----
+    // (가려진 동안에는 배너·왕관·점수도 app.js 가 함께 가린다)
+    const veil = !!api.revealVeil;
+    ensure(root, `rev-${s.round}${veil ? '-v' : ''}`, `
       <div class="qhint">${escapeHtml(v.category || '')}</div>
       <div class="qtext">${escapeHtml(v.word || '')}</div>
       <div class="mllist" id="lrList"></div>`);
@@ -319,7 +321,7 @@ export default {
       .sort((a, b) => b.voters.length - a.voters.length);
 
     root.querySelector('#lrList').innerHTML = rows.map(r => {
-      const isLiar = r.p.id === v.liarId;
+      const isLiar = !veil && r.p.id === v.liarId;
       const hint = [r.p.sub && r.p.sub.hint, r.p.sub && r.p.sub.hint2]
         .filter(Boolean).map(t => '“' + escapeHtml(t) + '”').join(' → ');
       return `
@@ -332,6 +334,8 @@ export default {
           <div class="mlvoters">${r.voters.length ? `지목한 사람: ${escapeHtml(r.voters.join(', '))}` : '지목 없음'}</div>
         </div>`;
     }).join('') || '<div class="qhint">참가자가 없습니다</div>';
+
+    if (veil) return;   // 추측 결과도 정체와 함께 드러난다
 
     root.querySelector('#lrList').insertAdjacentHTML('beforeend', v.guess
       ? `<div class="qnote">🎭 라이어의 제시어 추측: “${escapeHtml(v.guess)}” — ${

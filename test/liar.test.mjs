@@ -123,6 +123,9 @@ check('걸린 라이어는 제시어를 맞혀 +5점', A.p(L1.id).roundScore ===
 check('배너에 라이어 정체와 제시어가 나온다',
       /라이어는/.test(A.last.banner?.text || '') && A.last.banner.text.includes(WORD), A.last.banner?.text);
 check('결과에서 라이어 정체가 공개된다', A.last.view.liarId === L1.id);
+check('배너가 정체를 바로 말하지 않도록 뜸들일 시간이 실려 온다',
+      A.last.banner.delay > 0 && typeof A.last.banner.veil === 'string',
+      JSON.stringify({ delay: A.last.banner.delay, veil: A.last.banner.veil }));
 check('결과에서 라이어에게도 제시어가 공개된다', L1.last.view.word === WORD, String(L1.last.view.word));
 check('라이어의 추측이 정답 처리됐다', A.last.view.guessRight === true && A.last.view.guess === WORD);
 check('왕관은 라이어를 맞힌 시민들에게 간다', A.last.roundWinners.length === 3 && !A.last.roundWinners.includes(L1.id),

@@ -9,6 +9,8 @@ let ws = null;
 let myId = null, currentRoom = null, currentGame = null;
 let myReady = false, mySub = null, phase = 'waiting', stepKey = null;
 let inGame = false, overlayDismissed = false;
+// 게임이 '결과를 조금 뒤에 밝히자'고 하면(라이어의 정체) 그동안 배너·왕관·점수를 가린다
+let revealVeil = false, veilTimer = null;
 let pickedGame = DEFAULT_GAME;
 let lastState = null;   // 결과 이미지를 만들 때 쓴다
 // 미리 만든 문제 묶음. 서버는 내용을 되돌려주지 않으므로(정답이 들어 있다)
@@ -511,16 +513,18 @@ function nameOf(s, id) {
 }
 
 // 지난 판 기록 표 — 게임이 historyCell()을 제공할 때만 의미 있는 칸이 나온다
-function renderHistory(s) {
+// veil = 이번 판 결과를 아직 밝히면 안 되는 상태 (그 줄은 빼고 그린다)
+function renderHistory(s, veil) {
   const box = $('historyBox');
-  if (!s.history || !s.history.length) { box.classList.add('hidden'); return; }
+  const hist = veil ? (s.history || []).slice(0, -1) : (s.history || []);
+  if (!hist.length) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
 
   const cell = currentGame.historyCell;
   const rows = [...s.players].sort((a, b) => b.score - a.score);
-  const head = s.history.map(h => `<th>${h.suddenDeath ? '연장' : h.round}</th>`).join('');
+  const head = hist.map(h => `<th>${h.suddenDeath ? '연장' : h.round}</th>`).join('');
   const body = rows.map(p => {
-    const tds = s.history.map(h => {
+    const tds = hist.map(h => {
       const e = h.entries.find(x => x.id === p.id);
       if (!e) return '<td>·</td>';
       const glyph = cell ? (cell(e, s) || '') : '';
@@ -542,6 +546,23 @@ function render(s) {
   // 같은 제출 단계에 머무는 동안에만 내가 낸 것을 유지하고, 단계가 바뀌면 비운다
   if (!(s.phase === 'collect' && prevPhase === 'collect' && prevStep === s.step)) mySub = null;
   if (prevPhase !== 'gameover' && s.phase === 'gameover') overlayDismissed = false;
+
+  // 결과에 막 들어갔고 게임이 뜸을 들이라고 하면, 그만큼 가려 뒀다가 다시 그린다.
+  // banner.delay 를 주지 않는 게임은 여기서 아무 일도 일어나지 않는다.
+  if (s.phase === 'reveal' && prevPhase !== 'reveal') {
+    clearTimeout(veilTimer);
+    const wait = (s.banner && s.banner.delay) || 0;
+    revealVeil = wait > 0;
+    if (revealVeil) {
+      veilTimer = setTimeout(() => {
+        revealVeil = false;
+        if (lastState) render(lastState);
+      }, wait * 1000);
+    }
+  } else if (s.phase !== 'reveal') {
+    clearTimeout(veilTimer);
+    revealVeil = false;
+  }
 
   const me = s.players.find(p => p.id === myId);
   const midMatch = s.phase === 'collect' || s.phase === 'reveal';
@@ -589,7 +610,10 @@ function render(s) {
   const banner = $('banner');
   if (s.phase === 'reveal') {
     banner.classList.remove('hidden');
-    if (s.banner) {
+    if (revealVeil) {
+      banner.className = 'banner draw';
+      banner.textContent = (s.banner && s.banner.veil) || '결과를 확인하는 중…';
+    } else if (s.banner) {
       banner.className = 'banner' + (s.banner.kind === 'draw' ? ' draw' : '');
       banner.textContent = s.banner.text;
     } else if (s.suddenDeath) {
@@ -621,7 +645,7 @@ function render(s) {
     renderIdleGuide($('gamearea'), currentGame);
   } else if (currentGame.update) {
     currentGame.update($('gamearea'), s, {
-      myId, me, canSubmit, mySub, iSpectator,
+      myId, me, canSubmit, mySub, iSpectator, revealVeil,
       submit: (value, extra) => submit(value, extra),
       nameOf: (id) => nameOf(s, id),
     });
@@ -715,10 +739,12 @@ function render(s) {
     $('botPlus').disabled = bots.length >= 3;
   } else botRow.classList.add('hidden');
 
-  renderHistory(s);
+  renderHistory(s, revealVeil);
 
   // 플레이어 목록 (점수 내림차순)
-  const winnerSet = new Set(s.phase === 'reveal' ? s.roundWinners : (s.phase === 'gameover' ? s.champions : []));
+  const winnerSet = new Set(
+    (s.phase === 'reveal' && !revealVeil) ? s.roundWinners
+      : (s.phase === 'gameover' ? s.champions : []));
   const list = $('players');
   list.innerHTML = '';
   [...s.players].sort((a, b) => b.score - a.score).forEach(p => {
@@ -733,9 +759,10 @@ function render(s) {
     else if (spectating && !p.isBot) badges += '<span class="badge spectator">관전</span>';
     else if ((s.phase === 'waiting' || s.phase === 'gameover') && p.ready) badges += '<span class="badge ready">준비</span>';
     else if (s.phase === 'collect' && p.hasSubmitted) badges += '<span class="badge chosen">완료</span>';
-    if (s.phase === 'reveal' && p.roundScore > 0) badges += `<span class="badge win">+${p.roundScore}</span>`;
+    if (s.phase === 'reveal' && !revealVeil && p.roundScore > 0) badges += `<span class="badge win">+${p.roundScore}</span>`;
 
-    const subDisp = (s.phase === 'reveal' && currentGame.subDisplay) ? (currentGame.subDisplay(p, s) || '') : '';
+    const subDisp = (s.phase === 'reveal' && !revealVeil && currentGame.subDisplay)
+      ? (currentGame.subDisplay(p, s) || '') : '';
     const crown = isWinner ? '<span class="crown">👑</span>' : '';
 
     li.innerHTML =
