@@ -243,7 +243,8 @@ export default {
     sample: ['흔하다 ↔ 귀하다', '우리 팀에서 조용하다 ↔ 시끄럽다'],
   }),
 
-  awards(s, h) {
+  // 이 판의 장면 후보 (센 순서로)
+  moments(s, h) {
     // 🎯 정중앙 — 목표에서 가장 좁은 띠 안에 들어간 횟수
     const bull = h.top((rs) => rs.filter(r =>
       r.log && r.sub.guess != null && Math.abs(r.sub.guess - r.log.target) <= r.log.bull).length);
@@ -253,8 +254,8 @@ export default {
       return sum + r.entries.reduce((a, e) => a + (e.id === id ? 0 : (e.roundScore || 0)), 0);
     }, 0));
     return [
-      h.award('🎯', '정중앙', bull, (v) => `${v}번 한가운데를 맞혔습니다`),
-      h.award('🗣', '명 힌트', clue, (v) => `내 힌트로 남들이 ${v}점을 가져갔습니다`),
+      h.pick('🎯', '정중앙', bull, (v) => `${v}번 한가운데를 맞혔습니다`, 2),
+      h.pick('🗣', '명 힌트', clue, (v) => `내 힌트로 남들이 ${v}점을 가져갔습니다`, 20),
     ];
   },
 

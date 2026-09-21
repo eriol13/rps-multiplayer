@@ -127,6 +127,7 @@ function getRoom(code, gameId, totalRounds) {
       history: [],            // 지난 라운드 기록 (누가 뭘 냈고 몇 점인지)
       champions: [],          // 최종 우승자 id들
       championScore: 0,
+      moment: true,           // 매치 끝에 '이 판의 장면'을 띄울지 (방장이 끌 수 있다)
       public: true,           // 공개 방이면 첫 화면 목록에 뜬다 (기본 공개)
       password: '',           // 비공개 방에만 걸 수 있는 잠금 (비우면 없음)
       hostId: null,           // 방을 만든 사람
@@ -222,6 +223,7 @@ function broadcast(room) {
     configurable: !!room.game.configure,
     champions: room.champions,
     championScore: room.championScore,
+    moment: room.moment,
     hostId: room.hostId,
     pickerId: room.pickerId,
     suddenDeath: room.suddenDeath,
@@ -716,6 +718,12 @@ wss.on('connection', (ws) => {
       if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
       if (!room.game.configure) return;
       if (room.game.configure(room, player, msg)) broadcast(room);
+    } else if (msg.type === 'setmoment') {
+      // '이 판의 장면'을 띄울지 — 방장만. 게임이 아니라 방의 설정이라 게임을 바꿔도 남는다.
+      if (room.phase !== 'waiting' && room.phase !== 'gameover') return;
+      if (player.id !== room.hostId) return;
+      room.moment = !!msg.value;
+      broadcast(room);
     } else if (msg.type === 'setrounds') {
       // 판수 바꾸기 — 방장만, 대기 중에만. 역할이 도는 게임에서 인원수에 맞추는 용도다.
       if (room.phase !== 'waiting' && room.phase !== 'gameover') return;

@@ -448,6 +448,20 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 #overlay button { width: 80%; }
 @keyframes pop { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
+/* 이 판의 장면 — 우승 이름 아래 한 줄 */
+#overlay .moment {
+  width: 92%; max-width: 400px; margin: -6px 0 20px;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px;
+}
+#overlay .moment .mico { font-size: 30px; flex: 0 0 auto; line-height: 1; }
+#overlay .moment .mtxt { font-size: 14px; color: #e2e8f0; line-height: 1.45; }
+#overlay .moment .mtxt b {
+  display: block; color: #fbbf24; font-size: 11px; letter-spacing: .04em;
+  font-weight: 800; margin-bottom: 3px;
+}
+#momentrow .cfghint { margin: 4px 0 0; }
+
 /* 결과를 하나씩 깔 때 — 아직 안 깐 줄은 흐리게, 까이면 떠오른다 */
 .qopt.veiled .fbmeta { visibility: hidden; }
 .qopt.veiled { opacity: .55; }
@@ -457,16 +471,3 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   100% { transform: translateY(0); opacity: 1; }
 }
 
-/* 시상식 — 우승 이름 아래에 붙는 칭호들 */
-.awards {
-  width: 90%; max-width: 380px; margin: -8px 0 20px;
-  display: grid; gap: 6px; max-height: 40vh; overflow-y: auto;
-}
-.award {
-  display: flex; align-items: center; gap: 10px; text-align: left;
-  background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 8px 12px;
-}
-.award .aico { font-size: 22px; flex: 0 0 auto; }
-.award .atxt { font-size: 13px; color: #e2e8f0; line-height: 1.4; }
-.award .atxt b { color: #fbbf24; }
-.award .atxt small { display: block; color: #94a3b8; font-size: 11px; margin-top: 1px; }

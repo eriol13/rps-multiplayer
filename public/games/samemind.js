@@ -175,13 +175,14 @@ export default {
     sample: ['우리 팀 회식 장소', '야근할 때 시키는 배달 음식'],
   }),
 
-  awards(s, h) {
+  // 이 판의 장면 후보
+  moments(s, h) {
     // 🧠 가장 잘 통한 사람 — 나와 같은 답을 낸 사람 수의 합
     const tuned = h.top((rs, id) => rs.reduce((sum, r) => {
       const grp = r.log && (r.log.groups || []).find(g => g.ids.includes(id));
       return sum + (grp ? grp.ids.length - 1 : 0);
     }, 0));
-    return [h.award('🧠', '통하는 사람', tuned, (v) => `남들과 ${v}번 생각이 겹쳤습니다`)];
+    return [h.pick('🧠', '통하는 사람', tuned, (v) => `남들과 ${v}번 생각이 겹쳤습니다`, 5)];
   },
 
 };

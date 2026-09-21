@@ -1,7 +1,7 @@
 // 방·연결·재접속·공용 화면. 게임별 UI는 games/<id>.js 가 담당한다.
 import { GAMES, GAME_LIST, DEFAULT_GAME } from './games/index.js';
 import { escapeHtml, downloadBlob } from './util.js';
-import { collectAwards } from './awards.js';
+import { pickMoment } from './moment.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -727,6 +727,20 @@ function render(s) {
     }
   } else rr.classList.add('hidden');
 
+  // 이 판의 장면 켜고 끄기 — 방장만, 대기 중에만
+  const mr = $('momentrow');
+  if (waiting && iHost) {
+    mr.classList.remove('hidden');
+    const on = s.moment !== false;
+    mr.querySelectorAll('[data-moment]').forEach(b => {
+      b.classList.toggle('on', (b.dataset.moment === '1') === on);
+      b.onclick = () => ws && ws.send(JSON.stringify({ type: 'setmoment', value: b.dataset.moment === '1' }));
+    });
+    $('momenthint').textContent = on
+      ? '매치가 끝나면 점수판에 안 나오는 장면을 한 줄 띄웁니다. 4명 이상이고, 내세울 만한 것이 있을 때만 나옵니다.'
+      : '매치가 끝나면 우승자와 점수만 보여줍니다.';
+  } else mr.classList.add('hidden');
+
   // 봇 조절 — 대기 중이고, 봇을 지원하는 게임일 때만
   const botRow = $('botrow');
   const bots = s.players.filter(p => p.isBot);
@@ -779,24 +793,22 @@ function render(s) {
     $('champName').textContent = s.champions.length > 1 ? `공동 우승: ${names}` : `${names} 우승! 🎉`;
     const ot = s.overtime ? ' · 🔥 연장 승부 끝에!' : '';
     $('champScore').textContent = `${s.totalRounds}판 승부${ot} · 최종 점수 ${s.championScore}점`;
-    renderAwards(s);
+    renderMoment(s);
     $('overlay').classList.remove('hidden');
   } else {
     $('overlay').classList.add('hidden');
   }
 }
 
-// 시상식 — 우승 이름 아래에 칭호를 붙인다.
+// 이 판의 장면 — 우승 이름 아래 한 줄. 없으면 아무것도 안 띄운다.
 // 계산에 필요한 것(지난 판 기록)은 이미 다 내려와 있어 서버에 더 물을 것이 없다.
-function renderAwards(s) {
-  const box = $('awards');
-  const list = collectAwards(s, currentGame);
-  box.classList.toggle('hidden', !list.length);
-  box.innerHTML = list.map(a => `<div class="award">
-      <span class="aico">${a.icon}</span>
-      <span class="atxt"><b>${escapeHtml(a.title)}</b> — ${escapeHtml(a.names.join(', '))}
-        <small>${escapeHtml(a.detail)}</small></span>
-    </div>`).join('');
+function renderMoment(s) {
+  const box = $('moment');
+  const m = s.moment === false ? null : pickMoment(s, currentGame);
+  box.classList.toggle('hidden', !m);
+  box.innerHTML = m ? `
+    <span class="mico">${m.icon}</span>
+    <span class="mtxt"><b>이 판의 장면 · ${escapeHtml(m.title)}</b>${escapeHtml(m.names.join(', '))} — ${escapeHtml(m.detail)}</span>` : '';
 }
 
 // ---------- 입력 ----------
