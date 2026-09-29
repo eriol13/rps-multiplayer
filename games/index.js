@@ -8,6 +8,7 @@ import wavelength from './wavelength.js';
 import mostlikely from './mostlikely.js';
 import samemind from './samemind.js';
 import liar from './liar.js';
+import drawrelay from './drawrelay.js';
 
 export const GAMES = {
   [rps.id]: rps,
@@ -17,5 +18,6 @@ export const GAMES = {
   [mostlikely.id]: mostlikely,
   [samemind.id]: samemind,
   [liar.id]: liar,
+  [drawrelay.id]: drawrelay,
 };
 export const DEFAULT_GAME = rps.id;

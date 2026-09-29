@@ -471,3 +471,50 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   100% { transform: translateY(0); opacity: 1; }
 }
 
+
+/* 그림 릴레이 */
+.drtask { padding: 10px 12px; margin-bottom: 0; }
+.drpad {
+  display: block; width: 100%; aspect-ratio: 4 / 3; background: #fff; border-radius: 12px;
+  touch-action: none;   /* 그리는 동안 화면이 스크롤되지 않게 */
+  cursor: crosshair; margin: 12px 0 8px;
+}
+.drpad.done { opacity: .6; cursor: default; }
+.drtools { margin-bottom: 10px; }
+.drcolors { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; margin-bottom: 6px; }
+.drcolors button { aspect-ratio: 1; padding: 0; border: 2px solid #334155; border-radius: 50%; }
+.drcolors button.on { border-color: #e2e8f0; box-shadow: 0 0 0 2px #6366f1; }
+.drrow { display: flex; gap: 6px; }
+.drrow button {
+  flex: 1; height: 38px; padding: 0 4px; background: #0f172a; border: 1px solid #334155; font-size: 13px; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center;
+}
+.drrow button[data-tool="eraser"] { flex: 1.6; }
+.drrow button.on { background: #312e81; border-color: #6366f1; }
+.drrow button i { display: block; border-radius: 50%; background: #e2e8f0; }
+.drsuggest { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+.drsuggest button {
+  background: #0f172a; border: 1px solid #334155; font-size: 13px; font-weight: 500; padding: 7px 10px;
+}
+.drimg { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border-radius: 12px; margin: 10px 0; }
+.drmiss { text-align: center; color: #94a3b8; padding: 22px 10px; border: 1px dashed #475569; border-radius: 12px; margin: 10px 0; }
+.drsay {
+  font-size: 17px; font-weight: 700; text-align: center; line-height: 1.5;
+  padding: 14px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 12px;
+}
+.drsay small { color: #94a3b8; font-weight: 500; font-size: 12px; }
+.drhead { text-align: center; font-size: 16px; margin: 6px 0 10px; }
+.drhead small { color: #94a3b8; margin-left: 6px; }
+.dralbum { display: flex; flex-direction: column; gap: 14px; margin-bottom: 12px; }
+.drentry { opacity: 0; animation: drin .45s ease forwards; }
+.drentry .drimg { margin: 0; }
+.drwho { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
+.drheart { background: transparent; border: 1px solid #334155; padding: 3px 10px; font-size: 13px; border-radius: 999px; }
+.drheart.on { border-color: #ec4899; background: #500724; }
+.drdemo { display: flex; flex-direction: column; gap: 6px; }
+.drdemo .drsay { font-size: 14px; padding: 8px; }
+.drdim { color: #94a3b8; font-weight: 500; }
+@keyframes drin {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
