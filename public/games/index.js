@@ -7,6 +7,7 @@ import mostlikely from './mostlikely.js';
 import samemind from './samemind.js';
 import liar from './liar.js';
 import drawrelay from './drawrelay.js';
+import justone from './justone.js';
 
 export const GAMES = {
   [rps.id]: rps,
@@ -17,6 +18,7 @@ export const GAMES = {
   [samemind.id]: samemind,
   [liar.id]: liar,
   [drawrelay.id]: drawrelay,
+  [justone.id]: justone,
 };
 export const GAME_LIST = Object.values(GAMES);
 export const DEFAULT_GAME = rps.id;

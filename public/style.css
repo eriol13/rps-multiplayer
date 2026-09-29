@@ -518,3 +518,14 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   0% { transform: translateY(10px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
+
+/* 딱 하나 힌트 */
+.jocards { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 12px 0; }
+.jocard {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  padding: 14px 8px; background: #0f172a; border: 2px solid #475569; border-radius: 12px;
+}
+.jocard b { font-size: 17px; word-break: keep-all; }
+.jocard small { color: #94a3b8; font-size: 12px; }
+.jocard.out { opacity: .5; border-style: dashed; }
+.jocard.out b { text-decoration: line-through; }
