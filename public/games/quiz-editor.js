@@ -115,13 +115,13 @@ function editHtml() {
     <div class="gdsec">${S.editing === S.questions.length ? '새 문제' : `${S.editing + 1}번 문제 수정`}</div>
     <label>문제</label>
     <input id="edQText" value="${escapeHtml(d.text)}" placeholder="예) 대한민국의 수도는?" maxlength="200" />
-    <label>보기 <span style="color:#64748b">(2~4개 · 정답을 눌러 표시)</span></label>
+    <label>보기 <span style="color:var(--faint)">(2~4개 · 정답을 눌러 표시)</span></label>
     ${[0, 1, 2, 3].map(i => `
       <div class="qoptrow">
         <button type="button" class="qmark ${i === d.answer ? 'on' : ''}" data-mark="${i}">${SHAPES[i]}</button>
         <input class="edOpt" data-opt="${i}" value="${escapeHtml(d.options[i] || '')}" placeholder="보기 ${i + 1}${i < 2 ? '' : ' (선택)'}" maxlength="80" />
       </div>`).join('')}
-    <label>제한시간 <span style="color:#64748b">(5~60초)</span></label>
+    <label>제한시간 <span style="color:var(--faint)">(5~60초)</span></label>
     <input id="edSecs" type="number" min="5" max="60" value="${d.seconds}" />
     <div class="edrow wrap">
       <button type="button" class="btn-primary" id="edOk">확인</button>

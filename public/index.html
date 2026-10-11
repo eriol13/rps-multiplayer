@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎮 미니게임</title>
+<meta name="theme-color" content="#ffd23f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&display=swap">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -14,7 +18,7 @@
 
   <!-- 재접속 중 -->
   <div id="reconnecting" class="hidden">
-    <div class="invite-info">🔄 <b>다시 연결하는 중…</b><br><span style="font-size:13px;color:#94a3b8">이전 게임으로 돌아갑니다</span></div>
+    <div class="invite-info">🔄 <b>다시 연결하는 중…</b><br><span style="font-size:13px;color:var(--sub)">이전 게임으로 돌아갑니다</span></div>
     <button class="btn-link" id="giveUpReconnect">← 그만두고 처음부터</button>
   </div>
 
@@ -42,17 +46,17 @@
     <div id="createPanel" class="hidden">
       <label>어떤 게임을 할까요</label>
       <div class="gamepick" id="gamePick"></div>
-      <label>방 이름 <span style="color:#64748b" id="createRoomHint">(비우면 lobby)</span></label>
+      <label>방 이름 <span style="color:var(--faint)" id="createRoomHint">(비우면 lobby)</span></label>
       <input id="createRoom" placeholder="새 방 이름" maxlength="16" />
       <label class="checkrow">
         <input type="checkbox" id="createPrivate" />
-        <span>비공개 방으로 만들기 <span style="color:#64748b">— 목록에 뜨지 않습니다 (방 이름을 아는 사람은 들어올 수 있어요)</span></span>
+        <span>비공개 방으로 만들기 <span style="color:var(--faint)">— 목록에 뜨지 않습니다 (방 이름을 아는 사람은 들어올 수 있어요)</span></span>
       </label>
       <div class="subfield hidden" id="privatePassRow">
-        <label>비밀번호 <span style="color:#64748b">(선택 · 넣으면 이름을 알아도 못 들어옵니다)</span></label>
+        <label>비밀번호 <span style="color:var(--faint)">(선택 · 넣으면 이름을 알아도 못 들어옵니다)</span></label>
         <input id="createPass" type="password" placeholder="비밀번호" maxlength="20" autocomplete="off" />
       </div>
-      <label id="roundsLabel">몇 판 <span style="color:#64748b">(1~20)</span></label>
+      <label id="roundsLabel">몇 판 <span style="color:var(--faint)">(1~20)</span></label>
       <input id="createRounds" type="number" min="1" max="20" value="3" />
       <button class="btn-guide hidden" id="editorOpenCreate" style="margin:0 0 12px; width:100%"></button>
       <button class="btn-primary" id="createBtn">방 만들고 입장</button>
@@ -61,7 +65,7 @@
 
     <!-- 입장하기 패널 -->
     <div id="joinPanel" class="hidden">
-      <label>방 이름 <span style="color:#64748b">(들어갈 방 이름)</span></label>
+      <label>방 이름 <span style="color:var(--faint)">(들어갈 방 이름)</span></label>
       <input id="joinRoom" placeholder="방 이름" maxlength="16" />
       <button class="btn-primary" id="joinBtn">입장하기</button>
       <button class="btn-link" id="backFromJoin">← 뒤로</button>

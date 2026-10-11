@@ -77,7 +77,7 @@ export default {
         '<div class="wvmarks"><div class="wvmark" style="left:60%"></div><div class="wvmark" style="left:30%"></div></div>')
         + '<div class="wvclue" style="margin-bottom:0">💡 갓 내린 커피</div>';
     },
-    demoCaption: '노란 선이 목표, 초록 띠가 점수 구간, 흰 선이 각자 찍은 곳입니다. 목표와 띠는 힌트 담당에게만 보입니다.',
+    demoCaption: '노란 선이 목표, 초록 띠가 점수 구간, 검은 선이 각자 찍은 곳입니다. 목표와 띠는 힌트 담당에게만 보입니다.',
   },
 
 

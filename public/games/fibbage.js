@@ -26,7 +26,7 @@ function metaHtml(o, api) {
   if (o.truth) meta.push('<b class="fbtruth">진짜 답</b>');
   else if (authors.length) meta.push(`✍️ ${escapeHtml(authors.join(', '))}`);
   if (voters.length) meta.push(`${o.truth ? '⭕' : '🎣'} ${escapeHtml(voters.join(', '))}`);
-  else meta.push('<span style="color:#475569">아무도 안 골랐어요</span>');
+  else meta.push('<span style="color:var(--faint)">아무도 안 골랐어요</span>');
   return meta.join(' · ');
 }
 

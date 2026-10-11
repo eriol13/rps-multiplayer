@@ -18,6 +18,9 @@ project: minigame
 - `public/games/<id>.js` — **화면만**. `mount()` / `update()` / `subDisplay()`
   (필요하면 `status()`). 이름·아이콘·설명 등 표시 문구도 여기 있다.
 - `public/app.js` — 연결·세션·재접속·공용 렌더. `public/index.html`은 껍데기.
+- `public/style.css` — 색·글꼴은 맨 위 `:root` 토큰(`--ink`·`--accent`·`--pick`…)만 쓴다.
+  새 화면에 색 값을 직접 쓰지 않는다. 먹선+밀린 그림자(`--press`)는 누르는 것에만,
+  '내가 고른 것'은 `--pick`(노랑), 정답·오답은 `--good`·`--bad`.
 
 게임을 추가하려면 위 두 모듈을 만들고 `games/index.js`와
 `public/games/index.js`에 등록하면 된다. `server.js`는 건드리지 않는다.

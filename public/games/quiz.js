@@ -165,13 +165,13 @@ export default {
         <div class="qform">
           <label>문제</label>
           <input id="qText" placeholder="예) 대한민국의 수도는?" maxlength="200" />
-          <label>보기 <span style="color:#64748b">(2~4개 · 정답을 눌러 표시)</span></label>
+          <label>보기 <span style="color:var(--faint)">(2~4개 · 정답을 눌러 표시)</span></label>
           ${[0,1,2,3].map(i => `
             <div class="qoptrow">
               <button type="button" class="qmark" data-mark="${i}" title="정답으로 표시">${SHAPES[i]}</button>
               <input class="qopt-in" data-opt="${i}" placeholder="보기 ${i+1}${i<2?'':' (선택)'}" maxlength="80" />
             </div>`).join('')}
-          <label>제한시간 <span style="color:#64748b">(5~60초)</span></label>
+          <label>제한시간 <span style="color:var(--faint)">(5~60초)</span></label>
           <input id="qSecs" type="number" min="5" max="60" value="20" />
           <div id="qErr" class="qerr hidden"></div>
           <button class="btn-primary" id="qSend">이 문제 내기</button>

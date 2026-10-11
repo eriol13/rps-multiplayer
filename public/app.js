@@ -53,7 +53,7 @@ function renderGamePicker() {
 }
 function syncRoundsField() {
   const g = GAMES[pickedGame];
-  $('roundsLabel').innerHTML = `${g.roundsLabel || '몇 판'} <span style="color:#64748b">(1~20)</span>`;
+  $('roundsLabel').innerHTML = `${g.roundsLabel || '몇 판'} <span style="color:var(--faint)">(1~20)</span>`;
   $('createRounds').value = g.defaultRounds || 3;
   // 편집기가 있는 게임에서만 '미리 만들기' 버튼을 보여준다
   const btn = $('editorOpenCreate');
@@ -172,7 +172,7 @@ function renderLobbySummary() {
   $('lobbyCount').textContent = lobbyRooms.length ? `지금 열린 방 ${lobbyRooms.length}` : '지금 열린 방';
   if (!lobbyRooms.length) {
     box.innerHTML = `<div class="lobbyempty">지금 열린 공개 방이 없어요.<br>
-      <b style="color:#a5b4fc">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
+      <b style="color:var(--link)">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
     return;
   }
   box.innerHTML = `<div class="roomchips">
@@ -210,7 +210,7 @@ function renderRoomsModal() {
   const shown = roomsFilter === 'all' ? lobbyRooms : lobbyRooms.filter(r => r.game === roomsFilter);
   if (!shown.length) {
     box.innerHTML = `<div class="lobbyempty">지금 열린 공개 방이 없어요.<br>
-      <b style="color:#a5b4fc">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
+      <b style="color:var(--link)">방 만들기</b>로 하나 열어보세요 — 링크로 친구를 부를 수도 있습니다.</div>`;
     return;
   }
   box.innerHTML = shown.map(r => {
@@ -481,7 +481,7 @@ function renderIdleGuide(root, g) {
   root.innerHTML = `
     <div class="qhint">
       <b>${g.emoji} ${escapeHtml(g.name)}</b><br>${escapeHtml(g.desc)}
-      ${steps ? `<div style="margin-top:10px;color:#cbd5e1;line-height:1.8">${steps}</div>` : ''}
+      ${steps ? `<div style="margin-top:10px;color:var(--sub);line-height:1.8">${steps}</div>` : ''}
       <button class="btn-guide" style="margin:12px auto 0" data-more>자세한 설명 보기 →</button>
     </div>`;
   root.querySelector('[data-more]').onclick = () => openGuide(g.id);
@@ -603,8 +603,13 @@ function render(s) {
   // 카운트다운
   const cd = $('countdown');
   if (s.phase === 'collect' && s.countdown > 0) {
-    cd.classList.remove('hidden'); cd.textContent = s.countdown;
-  } else cd.classList.add('hidden');
+    cd.classList.remove('hidden');
+    if (cd.textContent !== String(s.countdown)) {   // 숫자가 바뀔 때만 한 번 튀게
+      cd.textContent = s.countdown;
+      cd.classList.remove('tick'); void cd.offsetWidth; cd.classList.add('tick');
+    }
+    cd.classList.toggle('hurry', s.countdown <= 3);
+  } else { cd.classList.add('hidden'); cd.textContent = ''; }
 
   // 라운드 결과 배너 — 서버(게임)가 문구를 주면 그것, 아니면 승자 기준 기본 문구
   const banner = $('banner');
@@ -657,11 +662,9 @@ function render(s) {
     rb.classList.remove('hidden');
     if (myReady) {
       rb.disabled = true;
-      rb.style.background = '#334155';
       rb.textContent = `대기 중… (준비 ${readyCount}/${live.length}명)`;
     } else {
       rb.disabled = false;
-      rb.style.background = '#6366f1';
       rb.textContent = `준비 완료 (준비 ${readyCount}/${live.length}명)`;
     }
   } else rb.classList.add('hidden');
@@ -852,29 +855,39 @@ function drawResultCard(s) {
   cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
 
-  const bg = c.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#1e293b');
-  bg.addColorStop(1, '#0f172a');
-  c.fillStyle = bg; c.fillRect(0, 0, W, H);
+  // 색은 화면과 같은 디자인 토큰(style.css :root)에서 읽는다
+  const css = getComputedStyle(document.documentElement);
+  const tok = (n) => css.getPropertyValue(n).trim();
+  const ink = tok('--ink');
+  const display = '"Bagel Fat One", "Segoe UI", system-ui, sans-serif';
+  const body = '"Segoe UI", system-ui, sans-serif';
+  // 먹선 + 밀린 그림자 상자 — 화면의 버튼과 같은 모양
+  const box = (x, top, w, h, fill, shadow) => {
+    if (shadow) { c.fillStyle = ink; c.fillRect(x + shadow, top + shadow, w, h); }
+    c.fillStyle = fill; c.fillRect(x, top, w, h);
+    c.lineWidth = 3; c.strokeStyle = ink; c.strokeRect(x, top, w, h);
+  };
+
+  c.fillStyle = tok('--page'); c.fillRect(0, 0, W, H);
 
   c.textAlign = 'center';
-  c.fillStyle = '#e2e8f0';
-  c.font = 'bold 44px "Segoe UI", system-ui, sans-serif';
+  c.fillStyle = ink;
+  c.font = `44px ${display}`;
   c.fillText(`${currentGame.emoji} ${currentGame.name}`, W / 2, 90);
 
-  c.fillStyle = '#94a3b8';
-  c.font = '22px "Segoe UI", system-ui, sans-serif';
+  c.fillStyle = tok('--sub');
+  c.font = `22px ${body}`;
   const d = new Date();
   const stamp = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
   c.fillText(`방 ${s.room} · ${s.totalRounds}${currentGame.unit || '판'} · ${stamp}`, W / 2, 132);
 
   const champs = s.champions.map(id => nameOf(s, id)).join(', ');
-  c.fillStyle = '#fbbf24';
-  c.font = 'bold 34px "Segoe UI", system-ui, sans-serif';
+  c.fillStyle = ink;
+  c.font = `36px ${display}`;
   c.fillText('🏆 ' + (champs || '무승부'), W / 2, 210);
   if (s.overtime) {
-    c.fillStyle = '#f472b6';
-    c.font = '20px "Segoe UI", system-ui, sans-serif';
+    c.fillStyle = tok('--bad');
+    c.font = `bold 20px ${body}`;
     c.fillText('🔥 연장 승부 끝에!', W / 2, 244);
   }
 
@@ -882,25 +895,22 @@ function drawResultCard(s) {
   let y = listTop;
   c.textAlign = 'left';
   ranked.forEach((p, i) => {
-    c.fillStyle = i === 0 ? '#29200a' : '#0f172a';
-    c.fillRect(70, y, W - 140, 62);
-    c.fillStyle = i === 0 ? '#fbbf24' : '#334155';
-    c.fillRect(70, y, 5, 62);
+    box(70, y, W - 140, 58, i === 0 ? tok('--accent') : tok('--surface'), i === 0 ? 5 : 0);
 
-    c.fillStyle = '#e2e8f0';
-    c.font = 'bold 26px "Segoe UI", system-ui, sans-serif';
-    c.fillText(`${medals[i] || ` ${i + 1}`}  ${p.name}${p.isBot ? ' 🤖' : ''}`, 100, y + 40);
+    c.fillStyle = ink;
+    c.font = `bold 26px ${body}`;
+    c.fillText(`${medals[i] || ` ${i + 1}`}  ${p.name}${p.isBot ? ' 🤖' : ''}`, 96, y + 38);
 
     c.textAlign = 'right';
-    c.fillStyle = '#fbbf24';
-    c.fillText(String(p.score), W - 100, y + 40);
+    c.font = `28px ${display}`;
+    c.fillText(String(p.score), W - 96, y + 40);
     c.textAlign = 'left';
     y += 72;
   });
 
   c.textAlign = 'center';
-  c.fillStyle = '#64748b';
-  c.font = '20px "Segoe UI", system-ui, sans-serif';
+  c.fillStyle = tok('--sub');
+  c.font = `20px ${body}`;
   c.fillText(location.host, W / 2, H - 46);
   return cv;
 }
