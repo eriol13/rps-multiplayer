@@ -8,6 +8,7 @@ import samemind from './samemind.js';
 import liar from './liar.js';
 import drawrelay from './drawrelay.js';
 import justone from './justone.js';
+import bomb from './bomb.js';
 
 export const GAMES = {
   [rps.id]: rps,
@@ -19,6 +20,7 @@ export const GAMES = {
   [liar.id]: liar,
   [drawrelay.id]: drawrelay,
   [justone.id]: justone,
+  [bomb.id]: bomb,
 };
 export const GAME_LIST = Object.values(GAMES);
 export const DEFAULT_GAME = rps.id;

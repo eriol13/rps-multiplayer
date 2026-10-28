@@ -26,6 +26,7 @@ const SUITES = [
   'liar2.test.mjs',
   'drawrelay.test.mjs',
   'justone.test.mjs',
+  'bomb.test.mjs',
   'gameswap.test.mjs',
   'moment.test.mjs',
   'polish.test.mjs',

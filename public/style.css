@@ -610,8 +610,25 @@ button:focus-visible { outline: 3px solid var(--accent2); outline-offset: 2px; }
 .jocard.out { opacity: .5; border-style: dashed; }
 .jocard.out b { text-decoration: line-through; }
 
+/* 폭탄 돌리기 */
+.bkprompt { font-family: var(--f-display); font-size: 56px; letter-spacing: 6px; }
+.bkline { text-align: center; min-height: 24px; margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.bktry { padding: 2px 10px; border-radius: 999px; background: var(--bad-soft); color: var(--bad); text-decoration: line-through; }
+.bktry small { text-decoration: none; display: inline-block; margin-left: 4px; }
+.bkseats { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 12px 0; }
+.bkseat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
+  padding: 10px 6px; background: var(--surface); border: var(--line-sm); border-radius: 12px;
+}
+.bkseat b { word-break: keep-all; }
+.bkseat small { color: var(--sub); font-size: 12px; }
+.bkseat.hold { background: var(--pick); animation: bkshake .5s ease-in-out infinite; }
+.bkseat.dead { opacity: .45; border-style: dashed; }
+.bkbomb { font-size: 20px; min-height: 26px; }
+@keyframes bkshake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+
 /* 움직임을 줄여 달라는 설정이면 장식 애니메이션은 끈다 */
 @media (prefers-reduced-motion: reduce) {
   .countdown.tick, .banner, .player.winner, #overlay .trophy, #overlay .champ, #overlay .moment,
-  .qopt.lifted, .drentry { animation: none !important; opacity: 1; }
+  .qopt.lifted, .drentry, .bkseat.hold { animation: none !important; opacity: 1; }
 }
