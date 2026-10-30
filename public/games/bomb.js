@@ -1,5 +1,6 @@
 // 폭탄 돌리기 — 화면 담당 (규칙은 서버 games/bomb.js)
 import { escapeHtml } from '../util.js';
+import { play, buzz } from '../sound.js';
 
 // 차례가 바뀔 때만 다시 그린다 (틀린 시도마다 오는 리렌더에 치던 글자가 날아가지 않게)
 function ensure(root, key, html) {
@@ -90,6 +91,8 @@ export default {
 
   mount(root) {
     root.dataset.bk = '';
+    root.dataset.bkSeen = '';
+    root.dataset.bkTries = '0';
     root.innerHTML = '';
   },
 
@@ -122,6 +125,14 @@ export default {
         <div class="bkline" id="bkLast"></div>
         <div id="bkSeats"></div>
         <div id="bkUsed"></div>`);
+      // 소리 — 차례가 바뀌면 방금 일(넘김·펑), 내 틀린 시도가 늘면 삑. 처음 그릴 때는 조용히.
+      if (built && root.dataset.bkSeen && v.last) {
+        play(v.last.kind === 'boom' ? 'boom' : 'pass');
+        if (v.last.kind === 'boom' && v.last.id === api.myId) buzz(300);
+      }
+      if (mine && v.tries.length > Number(root.dataset.bkTries || 0)) play('wrong');
+      root.dataset.bkSeen = '1';
+      root.dataset.bkTries = v.tries.length;
       if (built && mine) {
         const input = root.querySelector('#bkText');
         const send = () => {
@@ -143,11 +154,15 @@ export default {
     }
 
     if (s.phase === 'reveal') {
-      ensure(root, `rev-${s.round}-${s.suddenDeath}`, `
+      const built = ensure(root, `rev-${s.round}-${s.suddenDeath}`, `
         <div class="bkline">${lastHtml(v, api)}</div>
         ${v.examples && v.examples.length ? `<div class="qnote">${escapeHtml(v.prompt)} — 이런 단어도 있었어요: ${v.examples.map(escapeHtml).join(' · ')}</div>` : ''}
         ${seatsHtml(v, s, api)}
         ${v.longest ? `<div class="qnote">가장 긴 단어: <b>${escapeHtml(v.longest.word)}</b> (${escapeHtml(api.nameOf(v.longest.id))})</div>` : ''}`);
+      if (built && root.dataset.bkSeen && v.last && v.last.kind === 'boom') {
+        play('boom');
+        if (v.last.id === api.myId) buzz(300);
+      }
     }
   },
 

@@ -2,6 +2,7 @@
 import { GAMES, GAME_LIST, DEFAULT_GAME } from './games/index.js';
 import { escapeHtml, downloadBlob } from './util.js';
 import { pickMoment } from './moment.js';
+import { play, buzz, mountSoundControl } from './sound.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -611,6 +612,8 @@ function render(s) {
     cd.classList.toggle('hurry', s.countdown <= 3);
   } else { cd.classList.add('hidden'); cd.textContent = ''; }
 
+  cue(s, me, canSubmit);
+
   // 라운드 결과 배너 — 서버(게임)가 문구를 주면 그것, 아니면 승자 기준 기본 문구
   const banner = $('banner');
   if (s.phase === 'reveal') {
@@ -803,6 +806,34 @@ function render(s) {
   }
 }
 
+// 효과음 — 상태가 '바뀐 순간'에만 낸다. 같은 상태가 다시 와도(채팅·준비 등으로 오는 재전송) 조용하다.
+// 게임 고유의 소리(폭탄 펑 등)는 각 게임 화면이 sound.js 를 직접 부른다.
+let cuePrev = null, revealCued = '';
+function cue(s, me, canSubmit) {
+  const p = cuePrev;
+  cuePrev = { phase: s.phase, round: s.round, step: s.step, pickerId: s.pickerId, countdown: s.countdown };
+  const revealKey = s.phase === 'reveal' ? `${s.round}-${s.suddenDeath}` : '';
+  if (!p) { revealCued = revealKey; return; }   // 막 들어오거나 다시 연결된 직후엔 지난 일을 울리지 않는다
+  if (s.phase === 'collect') {
+    const fresh = p.phase !== 'collect' || p.round !== s.round || p.step !== s.step;
+    const myTurn = s.stepWho === 'picker' && s.pickerId === myId && (fresh || p.pickerId !== s.pickerId);
+    if (myTurn) { play('turn'); buzz(120); }
+    else if (fresh) play('start');
+    if (s.countdown > 0 && s.countdown <= 3 && s.countdown !== p.countdown && canSubmit && !(me && me.hasSubmitted)) play('tick');
+  } else if (s.phase === 'reveal') {
+    // 정체를 가리는 동안엔 참았다가, 가림이 걷힐 때 한 번만
+    if (!revealVeil && revealCued !== revealKey) {
+      revealCued = revealKey;
+      play(s.roundWinners.includes(myId) ? 'win' : 'reveal');
+    }
+  } else if (s.phase === 'gameover' && p.phase !== 'gameover') {
+    const champ = s.champions.includes(myId);
+    play(champ ? 'champ' : 'end');
+    if (champ) buzz([80, 60, 160]);
+  }
+  if (!revealKey) revealCued = '';
+}
+
 // 이 판의 장면 — 우승 이름 아래 한 줄. 없으면 아무것도 안 띄운다.
 // 계산에 필요한 것(지난 판 기록)은 이미 다 내려와 있어 서버에 더 물을 것이 없다.
 function renderMoment(s) {
@@ -941,6 +972,7 @@ function leaveRoom() {
   if (ws) { ws.onclose = null; try { ws.close(); } catch {} }
   ws = null; inGame = false; myId = null; myReady = false; mySub = null;
   phase = 'waiting'; stepKey = null; overlayDismissed = false; reconnectTries = 0;
+  cuePrev = null;
   myPass = ''; pendingJoin = null;
   $('passPanel').classList.add('hidden');
   $('reconnecting').classList.add('hidden');
@@ -980,6 +1012,8 @@ $('copyInviteBtn').onclick = async () => {
     window.prompt('초대 링크 (복사하세요):', link);   // 클립보드 권한 없을 때
   }
 };
+
+mountSoundControl($('soundCtl'));
 
 // 채팅
 $('chatsend').onclick = sendChat;
