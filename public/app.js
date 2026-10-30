@@ -2,7 +2,7 @@
 import { GAMES, GAME_LIST, DEFAULT_GAME } from './games/index.js';
 import { escapeHtml, downloadBlob } from './util.js';
 import { pickMoment } from './moment.js';
-import { play, buzz, mountSoundControl } from './sound.js';
+import { play, buzz, mountSoundControl, soundLabel, openSoundPanel } from './sound.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -445,8 +445,25 @@ function guideSectionsHtml(g) {
       ${gd.demoCaption ? `<div class="gdcap">${escapeHtml(gd.demoCaption)}</div>` : ''}` : ''}
     ${flow ? `<div class="gdsec">진행 순서</div>${flow}` : ''}
     ${scoring ? `<div class="gdsec">점수</div><table class="gdscore">${scoring}</table>` : ''}
-    ${tips ? `<div class="gdsec">알아두면 좋은 것</div><ul class="gdtips">${tips}</ul>` : ''}`;
+    ${tips ? `<div class="gdsec">알아두면 좋은 것</div><ul class="gdtips">${tips}</ul>` : ''}
+    <div class="gdsec">소리</div>${soundNoteHtml(g)}`;
 }
+
+// 효과음 안내 — 대기실과 게임 설명에 같은 한 줄. 게임이 고유한 소리를 guide.sounds 로 덧붙일 수 있다.
+function soundNoteHtml(g) {
+  const extra = g.guide && g.guide.sounds ? ` · ${escapeHtml(g.guide.sounds)}` : '';
+  return `<div class="soundnote">
+    <span>🔊 효과음이 나와요 — 라운드 시작·내 차례·마지막 3초·결과${extra}.
+      <small>지금: <b data-soundstate>${escapeHtml(soundLabel())}</b></small></span>
+    <button type="button" data-soundopen>음량 조절</button>
+  </div>`;
+}
+// 오른쪽 위 판이 모달에 가리지 않게 설명 창은 닫고 연다
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-soundopen]')) return;
+  $('guideModal').classList.add('hidden');
+  openSoundPanel();
+});
 
 function renderGuide() {
   $('guideTabs').innerHTML = GAME_LIST.map(g =>
@@ -484,7 +501,8 @@ function renderIdleGuide(root, g) {
       <b>${g.emoji} ${escapeHtml(g.name)}</b><br>${escapeHtml(g.desc)}
       ${steps ? `<div style="margin-top:10px;color:var(--sub);line-height:1.8">${steps}</div>` : ''}
       <button class="btn-guide" style="margin:12px auto 0" data-more>자세한 설명 보기 →</button>
-    </div>`;
+    </div>
+    ${soundNoteHtml(g)}`;
   root.querySelector('[data-more]').onclick = () => openGuide(g.id);
 }
 
@@ -1013,7 +1031,10 @@ $('copyInviteBtn').onclick = async () => {
   }
 };
 
-mountSoundControl($('soundCtl'));
+// 음량을 바꾸면 화면에 떠 있는 안내 문구의 '지금:' 도 따라 바뀐다
+mountSoundControl($('soundCtl'), () => {
+  document.querySelectorAll('[data-soundstate]').forEach(el => { el.textContent = soundLabel(); });
+});
 
 // 채팅
 $('chatsend').onclick = sendChat;

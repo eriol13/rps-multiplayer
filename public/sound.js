@@ -97,8 +97,15 @@ export function buzz(pattern) {
   try { navigator.vibrate(pattern); } catch {}
 }
 
+// 지금 상태 한 줄 — 대기실·게임 설명의 안내에 쓴다
+export const soundLabel = () => (settings.muted ? '꺼짐' : `켜짐 · 음량 ${settings.volume}%`);
+
+let openPanel = () => {};
+// 안내 문구의 '음량 조절' 버튼이 오른쪽 위 판을 연다
+export const openSoundPanel = () => openPanel(true);
+
 // 🔊 버튼 + 펼치는 판(끄기·음량)
-export function mountSoundControl(box) {
+export function mountSoundControl(box, onChange = () => {}) {
   box.innerHTML = `
     <button type="button" class="soundbtn" id="soundBtn" aria-label="효과음 설정" aria-expanded="false"></button>
     <div class="soundpanel hidden" id="soundPanel">
@@ -109,6 +116,7 @@ export function mountSoundControl(box) {
   const btn = box.querySelector('#soundBtn'), panel = box.querySelector('#soundPanel');
   const mute = box.querySelector('#soundMute'), vol = box.querySelector('#soundVol'), val = box.querySelector('#soundVal');
   const paint = () => {
+    onChange();
     btn.textContent = !audible() ? '🔇' : settings.volume < 50 ? '🔉' : '🔊';
     mute.textContent = settings.muted ? '🔈 켜기' : '🔇 끄기';
     vol.value = settings.volume;
@@ -116,6 +124,7 @@ export function mountSoundControl(box) {
     val.textContent = settings.muted ? '꺼짐' : `${settings.volume}%`;
   };
   const open = (on) => { panel.classList.toggle('hidden', !on); btn.setAttribute('aria-expanded', String(on)); };
+  openPanel = open;
   btn.onclick = () => open(panel.classList.contains('hidden'));
   mute.onclick = () => { settings.muted = !settings.muted; save(); paint(); play('pass'); };
   vol.oninput = () => { settings.volume = Number(vol.value); applyVolume(); paint(); };

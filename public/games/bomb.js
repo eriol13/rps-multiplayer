@@ -81,6 +81,7 @@ export default {
       '초성이 단어 가운데 들어가도 됩니다 — ㅅㄱ에 "교통사고", "입사관"도 됩니다.',
       '띄어쓰기는 무시합니다. 사전은 국립국어원 사전 데이터를 쓴 hunspell-dict-ko(CC BY-SA 4.0)입니다.',
     ],
+    sounds: '폭탄 넘김·펑·틀린 단어',
     demo() {
       return `<div class="qtext bkprompt">ㅅㄱ</div>
         <div class="bkline">✅ 앨리스 — <b>사과</b></div>

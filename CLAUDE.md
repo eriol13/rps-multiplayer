@@ -53,6 +53,9 @@ project: minigame
 
 화면 쪽 모듈은 `moments(s, h)`로 매치가 끝났을 때 띄울 '이 판의 장면' 후보를
 센 순서로 돌려줄 수 있다 — 고르는 규칙(4명 이상·문턱·하나만)은 `public/moment.js`.
+효과음은 `public/sound.js`(WebAudio 합성, 🔊 음량·끄기)가 맡고 공용 순간(시작·내 차례·째깍·결과·우승)은
+`app.js`가 알아서 울린다. 게임 고유의 소리는 화면 모듈이 `play()`를 직접 부르고, 그 소리를
+`guide.sounds`(한 줄)에 적으면 대기실·게임 설명의 효과음 안내에 붙는다.
 또 `editor`(+`deckNoun`·`editorLabel`)로 방장이 문제를 직접 만드는
 창을 열 수 있다 — 한두 칸짜리면 `list-editor.js`의 `makeEditor(spec)`를 쓰고, 퀴즈만
 구조가 달라 `quiz-editor.js`를 따로 쓴다. 규칙 모듈은 그 목록을 `configure`로 받아
