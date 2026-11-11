@@ -42,7 +42,8 @@ const server = http.createServer((req, res) => {
     if (err) { res.writeHead(404); res.end('not found'); return; }
     const ext = path.extname(filePath);
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
-    res.writeHead(200, { 'Content-Type': (types[ext] || 'text/plain') + '; charset=utf-8' });
+    const images = { '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+    res.writeHead(200, { 'Content-Type': images[ext] || ((types[ext] || 'text/plain') + '; charset=utf-8') });
     res.end(data);
   });
 });
@@ -568,7 +569,9 @@ function removeBot(room) {
 }
 
 // ---------- WebSocket ----------
-const wss = new WebSocketServer({ server });
+// 메시지 하나의 상한. 기본값(100MiB)이면 큰 메시지 몇 개로 무료 플랜 메모리가 바닥난다.
+// 가장 큰 정상 메시지는 그림 릴레이 그림(≤150KB dataURL)이라 512KB면 넉넉하다.
+const wss = new WebSocketServer({ server, maxPayload: 512 * 1024 });
 let nextId = 1;
 
 // 연결이 아직 살아있는지 확인한다.
